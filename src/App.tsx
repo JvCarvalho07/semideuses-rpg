@@ -22,6 +22,28 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 const ABILITY_ORDER = Object.keys(ABILITY_META) as AbilityCategory[];
 const EQUIPMENT_TYPES = ["Arma", "Armadura", "Escudo", "Ferramenta", "Acessório", "Relíquia", "Consumível", "Outro"];
 const RACE_SUGGESTIONS = ["Semideus Grego", "Sátiro", "Ciclope", "Mortal Vidente", "Legado"];
+const LEGEND_CHOICES = [
+  {
+    value: "O Voto",
+    title: "O Voto",
+    description: "Sirva a um ideal eterno. O tempo deixa de tocar você, mas sua imortalidade passa a obedecer regras que não podem ser quebradas.",
+  },
+  {
+    value: "Ascensão Menor",
+    title: "Ascensão Menor",
+    description: "Assuma um domínio órfão como espírito ou divindade menor. Você se torna imortal, mas deixa para trás a vida de herói mortal.",
+  },
+  {
+    value: "Lenda Mortal",
+    title: "Lenda Mortal",
+    description: "Recuse a imortalidade. Sua vida continua finita, seus feitos permanecem e seu nome atravessa as gerações.",
+  },
+  {
+    value: "Renascimento",
+    title: "Renascimento",
+    description: "Escolha viver novamente e buscar a Ilha dos Bem-Aventurados através de três vidas verdadeiramente heroicas.",
+  },
+] as const;
 
 function modifier(score: number) {
   return Math.floor((score - 10) / 2);
@@ -272,19 +294,24 @@ function EquipmentEditor({
 }
 
 function normalizeSheet(candidate: CharacterSheet): CharacterSheet {
+  const rawGroups = candidate.abilityGroups as Partial<Record<AbilityCategory | "legend", Ability[]>>;
+  const legacyLegendEntries = candidate.legacyLegendEntries?.length
+    ? candidate.legacyLegendEntries
+    : rawGroups.legend;
   return {
     ...candidate,
     version: 2,
     avatarDataUrl: candidate.avatarDataUrl || "",
     race: candidate.race || "",
+    legendDestiny: candidate.legendDestiny || "",
+    legacyLegendEntries: legacyLegendEntries?.length ? legacyLegendEntries : undefined,
     dracmas: Math.max(0, Number(candidate.dracmas ?? 0)),
     abilityGroups: {
-      abilities: candidate.abilityGroups?.abilities || [],
-      filiation: candidate.abilityGroups?.filiation || [],
-      path: candidate.abilityGroups?.path || [],
-      skills: candidate.abilityGroups?.skills || [],
-      talents: candidate.abilityGroups?.talents || [],
-      legend: candidate.abilityGroups?.legend || [],
+      abilities: rawGroups.abilities || [],
+      filiation: rawGroups.filiation || [],
+      path: rawGroups.path || [],
+      skills: rawGroups.skills || [],
+      talents: rawGroups.talents || [],
     },
   };
 }
@@ -294,6 +321,7 @@ export default function Home() {
   const [hydrated, setHydrated] = useState(false);
   const [saved, setSaved] = useState(false);
   const [equipmentFilter, setEquipmentFilter] = useState("Todos");
+  const [legendOpen, setLegendOpen] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLElement>(null);
@@ -347,6 +375,30 @@ export default function Home() {
     const timer = window.setTimeout(() => setSaved(false), 1000);
     return () => window.clearTimeout(timer);
   }, [hydrated, sheet]);
+
+  useEffect(() => {
+    if (!legendOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setLegendOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const timeline = gsap.timeline();
+      timeline
+        .fromTo(".legend-overlay", { opacity: 0 }, { opacity: 1, duration: 0.28, ease: "power2.out" })
+        .fromTo(".legend-dialog-panel", { opacity: 0, y: 20, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "power3.out" }, 0.04)
+        .fromTo(".legend-choice", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.38, stagger: 0.055, ease: "power2.out" }, 0.17);
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [legendOpen]);
 
   const filiation = FILIATIONS[sheet.filiation as keyof typeof FILIATIONS] || {
     resource: "Recurso da filiação",
@@ -427,7 +479,7 @@ export default function Home() {
       ...INITIAL_SHEET,
       name: "",
       player: "",
-      abilityGroups: { abilities: [], filiation: [], path: [], skills: [], talents: [], legend: [] },
+      abilityGroups: { abilities: [], filiation: [], path: [], skills: [], talents: [] },
       equipment: [],
       personality: { trait: "", ideal: "", bond: "", flaw: "", backgroundTrait: "", backgroundBond: "", appearance: "", history: "", notes: "" },
     });
@@ -485,7 +537,7 @@ export default function Home() {
             </div>
             <div className="identity-fields">
               <label className="name-field"><span>Nome do herói</span><input placeholder="Nome do personagem" value={sheet.name} onChange={(event) => patch("name", event.target.value)} /></label>
-              <div className="identity-row">
+              <div className={`identity-row ${sheet.level >= 20 ? "has-legend" : ""}`}>
                 <label className="identity-filiation"><span>Filiação</span><select value={sheet.filiation} onChange={(event) => {
                   const name = event.target.value;
                   const selected = FILIATIONS[name as keyof typeof FILIATIONS];
@@ -494,6 +546,16 @@ export default function Home() {
                 <label className="identity-path"><span>Caminho divino</span><input value={sheet.pathName} onChange={(event) => patch("pathName", event.target.value)} /></label>
                 <label className="identity-race"><span>Raça</span><input list="race-options" placeholder="Ex.: Semideus Grego" value={sheet.race} onChange={(event) => patch("race", event.target.value)} /></label>
                 <label className="identity-level"><span>Nível</span><input type="number" min={1} value={sheet.level} onChange={(event) => patch("level", Math.max(1, Number(event.target.value)))} /></label>
+                {sheet.level >= 20 && (
+                  <button
+                    type="button"
+                    className={`legend-trigger ${sheet.legendDestiny ? "is-chosen" : ""}`}
+                    onClick={() => setLegendOpen(true)}
+                  >
+                    <span>Caminho da Lenda</span>
+                    <strong>{sheet.legendDestiny || "Definir destino"}</strong>
+                  </button>
+                )}
               </div>
               <datalist id="race-options">{RACE_SUGGESTIONS.map((race) => <option key={race} value={race} />)}</datalist>
               <div className="identity-secondary">
@@ -659,6 +721,46 @@ export default function Home() {
         </a>
         <a href="#inicio">Voltar ao início</a>
       </footer>
+
+      {legendOpen && (
+        <div
+          className="legend-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="legend-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setLegendOpen(false);
+          }}
+        >
+          <section className="legend-dialog-panel">
+            <button type="button" className="legend-close" aria-label="Fechar Caminho da Lenda" onClick={() => setLegendOpen(false)}>×</button>
+            <div className="legend-intro">
+              <span>Nível 20</span>
+              <h2 id="legend-title">O que restará quando a aventura terminar?</h2>
+              <p>O poder já não é a pergunta. Agora seu personagem decide o que fará com a própria lenda.</p>
+              {sheet.legendDestiny && <small>Destino atual: <strong>{sheet.legendDestiny}</strong></small>}
+            </div>
+            <div className="legend-choices">
+              {LEGEND_CHOICES.map((choice) => (
+                <button
+                  type="button"
+                  className={`legend-choice ${sheet.legendDestiny === choice.value ? "is-selected" : ""}`}
+                  aria-pressed={sheet.legendDestiny === choice.value}
+                  key={choice.value}
+                  onClick={() => {
+                    patch("legendDestiny", choice.value);
+                    setLegendOpen(false);
+                  }}
+                >
+                  <strong>{choice.title}</strong>
+                  <span>{choice.description}</span>
+                </button>
+              ))}
+              <button type="button" className="legend-later" onClick={() => setLegendOpen(false)}>Decidir depois</button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

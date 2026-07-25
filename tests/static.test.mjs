@@ -15,8 +15,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.doesNotMatch(html, /Héctor Vance|João Victor/);
   assert.match(model, /name: "",/);
   assert.match(model, /race: "",/);
+  assert.match(model, /legendDestiny: "",/);
   assert.match(model, /avatarDataUrl: "",/);
-  assert.match(model, /abilityGroups: \{ abilities: \[\], filiation: \[\], path: \[\], skills: \[\], talents: \[\], legend: \[\] \}/);
+  assert.match(model, /abilityGroups: \{ abilities: \[\], filiation: \[\], path: \[\], skills: \[\], talents: \[\] \}/);
   assert.match(model, /equipment: \[\],/);
   assert.match(model, /dracmas: 0,/);
   assert.doesNotMatch(model, /Héstia|Hestia/);
@@ -30,6 +31,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /Caminho divino/);
   assert.match(app, /Raça/);
   assert.match(app, /Mortal Vidente/);
+  assert.match(app, /O que restará quando a aventura terminar/);
+  assert.match(app, /Ascensão Menor/);
+  assert.match(app, /legacyLegendEntries/);
   assert.match(app, /Apoiar o projeto no GitHub com uma estrela/);
   assert.match(app, /type="range"/);
   assert.match(app, /prepareAvatar/);

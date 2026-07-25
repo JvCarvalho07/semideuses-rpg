@@ -1,5 +1,5 @@
 export type AttributeKey = "for" | "des" | "con" | "int" | "sab" | "car";
-export type AbilityCategory = "abilities" | "filiation" | "path" | "skills" | "talents" | "legend";
+export type AbilityCategory = "abilities" | "filiation" | "path" | "skills" | "talents";
 
 export type Ability = {
   id: string;
@@ -32,6 +32,8 @@ export type CharacterSheet = {
   avatarDataUrl: string;
   name: string;
   race: string;
+  legendDestiny: string;
+  legacyLegendEntries?: Ability[];
   filiation: string;
   pathName: string;
   origin: string;
@@ -122,7 +124,6 @@ export const ABILITY_META: Record<AbilityCategory, { title: string; description:
   path: { title: "Caminho divino", description: "Progressão própria do caminho escolhido." },
   skills: { title: "Skills", description: "Técnicas criadas, treinadas ou adquiridas." },
   talents: { title: "Talentos", description: "Especializações e vantagens permanentes." },
-  legend: { title: "Caminho da Lenda", description: "Feitos Lendários e progressão épica do nível 21 em diante." },
 };
 
 let seed = 0;
@@ -149,6 +150,7 @@ export const INITIAL_SHEET: CharacterSheet = {
   avatarDataUrl: "",
   name: "",
   race: "",
+  legendDestiny: "",
   filiation: "",
   pathName: "",
   origin: "",
@@ -171,7 +173,7 @@ export const INITIAL_SHEET: CharacterSheet = {
   initiativeExtra: 0,
   caExtra: 0,
   dracmas: 0,
-  abilityGroups: { abilities: [], filiation: [], path: [], skills: [], talents: [], legend: [] },
+  abilityGroups: { abilities: [], filiation: [], path: [], skills: [], talents: [] },
   equipment: [],
   personality: {
     trait: "",
