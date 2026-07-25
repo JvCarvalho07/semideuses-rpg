@@ -16,6 +16,7 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(model, /name: "",/);
   assert.match(model, /race: "",/);
   assert.match(model, /legendDestiny: "",/);
+  assert.match(model, /castingDcOverride: null,/);
   assert.match(model, /avatarDataUrl: "",/);
   assert.match(model, /abilityGroups: \{ abilities: \[\], filiation: \[\], path: \[\], skills: \[\], talents: \[\] \}/);
   assert.match(model, /equipment: \[\],/);
@@ -34,6 +35,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /O que restará quando a aventura terminar/);
   assert.match(app, /Ascensão Menor/);
   assert.match(app, /legacyLegendEntries/);
+  assert.match(app, /castingAttackBonus = castingModifier \+ prof/);
+  assert.match(app, /automaticCastingDc = 8 \+ castingModifier \+ prof/);
+  assert.match(app, /CD das habilidades/);
   assert.match(app, /Apoiar o projeto no GitHub com uma estrela/);
   assert.match(app, /type="range"/);
   assert.match(app, /prepareAvatar/);

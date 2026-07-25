@@ -305,6 +305,9 @@ function normalizeSheet(candidate: CharacterSheet): CharacterSheet {
     race: candidate.race || "",
     legendDestiny: candidate.legendDestiny || "",
     legacyLegendEntries: legacyLegendEntries?.length ? legacyLegendEntries : undefined,
+    castingDcOverride: Number.isFinite(candidate.castingDcOverride)
+      ? Number(candidate.castingDcOverride)
+      : null,
     dracmas: Math.max(0, Number(candidate.dracmas ?? 0)),
     abilityGroups: {
       abilities: rawGroups.abilities || [],
@@ -421,6 +424,10 @@ export default function Home() {
     .reduce((sum, item) => sum + item.armorClass, 0);
   const armorClass = armorBase + equipmentBonus + sheet.caExtra;
   const passivePerception = 10 + mods.sab + prof * (sheet.skillRanks.Percepção || 0);
+  const castingModifier = mods[sheet.castingAttribute];
+  const castingAttackBonus = castingModifier + prof;
+  const automaticCastingDc = 8 + castingModifier + prof;
+  const castingDc = sheet.castingDcOverride ?? automaticCastingDc;
 
   const rootStyle = {
     "--deity": filiation.accent,
@@ -593,7 +600,39 @@ export default function Home() {
               <div><span>Iniciativa</span><strong>{signed(mods.des + sheet.initiativeExtra)}</strong></div>
               <div><span>Deslocamento</span><strong>{sheet.speed} m</strong></div>
               <div><span>Percepção</span><strong>{passivePerception}</strong><small>passiva</small></div>
-              <label><span>Conjuração</span><select value={sheet.castingAttribute} onChange={(event) => patch("castingAttribute", event.target.value as AttributeKey)}>{Object.entries(ATTRIBUTE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select><strong>{signed(mods[sheet.castingAttribute])}</strong></label>
+              <div className="casting-panel">
+                <span className="casting-title">Conjuração</span>
+                <div className="casting-grid">
+                  <label className="casting-attribute">
+                    <small>Atributo</small>
+                    <select value={sheet.castingAttribute} onChange={(event) => patch("castingAttribute", event.target.value as AttributeKey)}>
+                      {Object.entries(ATTRIBUTE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                    </select>
+                  </label>
+                  <div className="casting-metric">
+                    <small>Ataque de conjuração</small>
+                    <strong>{signed(castingAttackBonus)}</strong>
+                    <span>atributo {signed(castingModifier)} · prof. {signed(prof)}</span>
+                  </div>
+                  <div className={`casting-metric casting-dc ${sheet.castingDcOverride !== null ? "is-overridden" : ""}`}>
+                    <label htmlFor="casting-dc">CD das habilidades</label>
+                    <input
+                      id="casting-dc"
+                      type="number"
+                      min={0}
+                      max={99}
+                      value={castingDc}
+                      aria-label="CD das habilidades"
+                      onFocus={(event) => event.currentTarget.select()}
+                      onChange={(event) => patch("castingDcOverride", event.target.value === "" ? null : Number(event.target.value))}
+                    />
+                    <span>{sheet.castingDcOverride === null ? `base 8 · atributo ${signed(castingModifier)} · prof. ${signed(prof)}` : "valor manual"}</span>
+                    {sheet.castingDcOverride !== null && (
+                      <button type="button" onClick={() => patch("castingDcOverride", null)} aria-label="Usar CD das habilidades automática">Usar auto</button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </section>
 
             <section className="saving-throws">

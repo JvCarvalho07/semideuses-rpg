@@ -49,6 +49,7 @@ export type CharacterSheet = {
   favor: number;
   sustain: number;
   castingAttribute: AttributeKey;
+  castingDcOverride: number | null;
   attributes: Record<AttributeKey, number>;
   saveProficiencies: AttributeKey[];
   skillRanks: Record<string, number>;
@@ -166,6 +167,7 @@ export const INITIAL_SHEET: CharacterSheet = {
   favor: 0,
   sustain: 0,
   castingAttribute: "sab",
+  castingDcOverride: null,
   attributes: { for: 10, des: 10, con: 10, int: 10, sab: 10, car: 10 },
   saveProficiencies: [],
   skillRanks: {},

@@ -444,7 +444,7 @@ input:focus, select:focus, textarea:focus {
 .combat-facts {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(4, 1fr) 1.3fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(390px, 1.65fr);
   color: #f8f4e9;
   background: linear-gradient(110deg, color-mix(in srgb, var(--deity-deep) 74%, #0a252d), color-mix(in srgb, var(--deity-secondary) 30%, #0a252d));
 }
@@ -465,6 +465,130 @@ input:focus, select:focus, textarea:focus {
 .combat-facts label span { grid-column: 1 / -1; }
 .combat-facts label select { color: #f8f1e4; background: transparent; border: 0; border-bottom: 1px solid #555a50; font-weight: 750; }
 .combat-facts label option { color: var(--ink); }
+.combat-facts .casting-panel {
+  min-width: 0;
+  padding: 10px 14px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 6px;
+  justify-content: initial;
+  background:
+    linear-gradient(105deg, rgba(255,255,255,.025), transparent 52%),
+    color-mix(in srgb, var(--deity) 5%, transparent);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--deity) 70%, var(--bronze));
+}
+.casting-title {
+  color: color-mix(in srgb, var(--deity-light) 62%, #b8b8ad) !important;
+  font-size: 8.5px !important;
+  font-weight: 850;
+  letter-spacing: .16em !important;
+}
+.casting-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: .75fr 1.05fr 1.2fr;
+  grid-auto-flow: dense;
+  border: 1px solid rgba(235, 222, 196, .18);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.casting-grid > * {
+  position: relative;
+  min-width: 0;
+  min-height: 48px;
+  padding: 6px 9px;
+  display: grid;
+  align-content: center;
+  border-right: 1px solid rgba(235, 222, 196, .16);
+  transition: background-color .25s ease, box-shadow .25s ease;
+}
+.casting-grid > *:last-child { border-right: 0; }
+.casting-grid > *:hover { background: rgba(255,255,255,.045); }
+.casting-grid small,
+.casting-dc > label {
+  color: #aaa99f;
+  font-size: 7.5px;
+  font-weight: 750;
+  line-height: 1.15;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.casting-grid .casting-attribute {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 2px;
+}
+.casting-grid .casting-attribute select {
+  width: 100%;
+  min-width: 0;
+  padding: 1px 14px 1px 0;
+  color: #fff8e9;
+  border-bottom-color: rgba(235, 222, 196, .32);
+  font-size: 16px;
+  cursor: pointer;
+}
+.casting-metric { grid-template-columns: 1fr auto; grid-template-rows: auto 1fr; }
+.casting-metric > small,
+.casting-metric > label { grid-column: 1 / -1; }
+.casting-metric > strong {
+  align-self: end;
+  margin: 0;
+  color: #fffaf0;
+  font-size: 24px;
+  line-height: .9;
+}
+.casting-metric > span {
+  align-self: end;
+  justify-self: end;
+  color: #85877f;
+  font-size: 7.2px;
+  line-height: 1.15;
+  text-align: right;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.casting-dc input {
+  width: 46px;
+  align-self: end;
+  padding: 0;
+  color: #fffaf0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(235, 222, 196, .36);
+  border-radius: 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  appearance: textfield;
+}
+.casting-dc input::-webkit-inner-spin-button,
+.casting-dc input::-webkit-outer-spin-button { margin: 0; appearance: none; }
+.casting-dc input:focus {
+  border-bottom-color: var(--deity-light);
+  outline: 0;
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--deity) 55%, transparent);
+}
+.casting-dc button {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  padding: 2px 4px;
+  color: var(--deity-light);
+  background: rgba(255,255,255,.05);
+  border: 1px solid color-mix(in srgb, var(--deity) 48%, transparent);
+  border-radius: 2px;
+  font-size: 6px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.casting-dc button:hover {
+  color: #111713;
+  background: var(--deity-light);
+  transform: translateY(-1px);
+}
+.casting-dc.is-overridden { box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--deity) 78%, var(--bronze)); }
 .saving-throws { grid-column: 1 / -1; padding: 18px 28px 22px; background: #f8efdd; }
 .compact-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
 .compact-heading h2 { margin: 0; font-family: "Cormorant Garamond", Georgia, serif; font-size: 23px; font-weight: 700; }
@@ -984,6 +1108,7 @@ footer a:hover { color: var(--deity-light); }
   .vitals-block { border-right: 0; border-bottom: 1px solid var(--line); }
   .divine-block { border-bottom: 1px solid var(--line); }
   .combat-facts { grid-template-columns: repeat(2, 1fr); }
+  .combat-facts .casting-panel { grid-column: 1 / -1; }
   .combat-facts > label { grid-column: 1 / -1; }
   .saving-throws > div:last-child { grid-template-columns: repeat(3, 1fr); }
   .stats-layout { grid-template-columns: 1fr; }
@@ -1043,6 +1168,8 @@ footer a:hover { color: var(--deity-light); }
   .temp-value { grid-column: 3; grid-row: 1; }
   .number-control { grid-template-columns: 1fr 28px 40px auto 28px; }
   .combat-facts { grid-template-columns: 1fr 1fr; }
+  .casting-grid { grid-template-columns: .8fr 1fr 1.2fr; }
+  .casting-grid > * { padding-inline: 8px; }
   .combat-facts > div, .combat-facts > label { min-height: 72px; padding: 13px 15px; }
   .pips-line { gap: 7px; }
   .pips-line > div { gap: 4px; }
@@ -1221,10 +1348,24 @@ footer a:hover { color: var(--deity-light); }
   .pips-line > span { font-size: 6.5pt; }
   .pips-line button { display: block !important; width: 4mm; height: 4mm; }
 
-  .combat-facts { grid-template-columns: repeat(5, 1fr); }
+  .combat-facts { grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(48mm, 1.6fr); }
   .combat-facts > div, .combat-facts > label { min-height: 16mm; padding: 2.5mm 4mm; }
   .combat-facts strong { font-size: 16pt; }
   .combat-facts span, .combat-facts small { font-size: 5.8pt; }
+  .combat-facts .casting-panel {
+    min-height: 16mm;
+    padding: 1.5mm 2mm;
+    gap: 1mm;
+    box-shadow: inset .7mm 0 0 var(--deity);
+  }
+  .casting-title { font-size: 5.4pt !important; }
+  .casting-grid { grid-template-columns: .75fr 1fr 1.1fr; }
+  .casting-grid > * { min-height: 10mm; padding: 1mm 1.3mm; }
+  .casting-grid small, .casting-dc > label { font-size: 4.8pt; }
+  .casting-grid .casting-attribute select { padding-right: 2mm; font-size: 9pt; }
+  .casting-metric > strong, .casting-dc input { font-size: 13pt; }
+  .casting-metric > span { display: none; }
+  .casting-dc button { display: none !important; }
   .saving-throws { padding: 3.5mm 5mm 4mm; }
   .compact-heading { margin-bottom: 2mm; }
   .compact-heading h2 { font-size: 14pt; }
