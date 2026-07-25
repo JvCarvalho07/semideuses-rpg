@@ -337,13 +337,13 @@ export default function Home() {
       </header>
 
       <div className="deity-rail" aria-hidden="true">
-        <div>{Object.keys(FILIATIONS).map((name) => <span key={name}>{name}</span>)}</div>
+        <div>{[...Object.keys(FILIATIONS), ...Object.keys(FILIATIONS)].map((name, index) => <span key={`${name}-${index}`}>{name}</span>)}</div>
       </div>
 
       <div className="site-content" id="inicio">
         <section className="hero-shell">
           <div className="hero-identity">
-            <div className="portrait-frame"><span>{sheet.name.slice(0, 1) || "Σ"}</span><small>FICHA DIGITAL</small></div>
+            <div className="portrait-frame" aria-hidden="true"><span>{sheet.name.slice(0, 1) || "Σ"}</span></div>
             <div className="identity-fields">
               <label className="name-field"><span>Nome do herói</span><input value={sheet.name} onChange={(event) => patch("name", event.target.value)} /></label>
               <div className="identity-row">
@@ -424,11 +424,7 @@ export default function Home() {
         </section>
 
         <section className="abilities-section reveal-section" id="habilidades">
-          <div className="section-intro">
-            <span>Arquivo de poder</span>
-            <h2>Tudo em seu lugar.</h2>
-            <p>Cada origem de poder tem sua própria área, com custos, alcance, duração e recarga visíveis.</p>
-          </div>
+          <div className="section-toolbar"><h2>Habilidades</h2></div>
           <div className="ability-categories">
             {ABILITY_ORDER.map((category) => (
               <AbilitySection
@@ -442,10 +438,8 @@ export default function Home() {
         </section>
 
         <section className="equipment-section reveal-section" id="equipamentos">
-          <div className="section-intro equipment-intro">
-            <span>Inventário vivo</span>
-            <h2>Equipar muda a ficha.</h2>
-            <p>Armaduras, escudos e bônus equipados entram automaticamente no cálculo da CA.</p>
+          <div className="section-toolbar">
+            <h2>Equipamentos</h2>
             <button type="button" className="large-add" onClick={() => patch("equipment", [...sheet.equipment, { id: makeId("eq"), name: "", type: "Outro", quantity: 1, equipped: false, armorClass: 0, attack: "", damage: "", properties: "", notes: "" }])}>Adicionar equipamento</button>
           </div>
           <div className="equipment-workspace">
@@ -465,7 +459,7 @@ export default function Home() {
         </section>
 
         <section className="story-section reveal-section" id="historia">
-          <div className="section-intro"><span>Identidade</span><h2>Quem existe além dos números.</h2><p>Antecedente, personalidade e história permanecem juntos no site e no PDF.</p></div>
+          <div className="section-toolbar"><h2>História e traços</h2></div>
           <div className="personality-grid">
             <label><span>Traço</span><textarea value={sheet.personality.trait} onChange={(event) => patchPersonality("trait", event.target.value)} /></label>
             <label><span>Ideal</span><textarea value={sheet.personality.ideal} onChange={(event) => patchPersonality("ideal", event.target.value)} /></label>

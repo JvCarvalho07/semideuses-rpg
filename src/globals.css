@@ -99,14 +99,17 @@ input:focus, select:focus, textarea:focus {
   color: #7b7e75;
   border-bottom: 1px solid #292c26;
   background: #111310;
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
 }
 .deity-rail > div {
   width: max-content;
   padding: 10px 0;
   display: flex;
   gap: 32px;
-  animation: rail 42s linear infinite;
+  animation: rail 150s linear infinite;
+  will-change: transform;
 }
+.deity-rail:hover > div, .deity-rail:focus-within > div { animation-play-state: paused; }
 .deity-rail span {
   position: relative;
   font-family: Georgia, serif;
@@ -133,9 +136,10 @@ input:focus, select:focus, textarea:focus {
   background: var(--deity);
 }
 .hero-identity {
+  position: relative;
   display: grid;
-  grid-template-columns: 190px 1fr;
-  min-height: 258px;
+  grid-template-columns: 132px 1fr;
+  min-height: 194px;
   border-bottom: 1px solid var(--line);
 }
 .portrait-frame {
@@ -150,15 +154,14 @@ input:focus, select:focus, textarea:focus {
 .portrait-frame::before, .portrait-frame::after {
   content: "";
   position: absolute;
-  width: 230px;
+  width: 165px;
   height: 1px;
   background: rgba(255,255,255,.18);
   transform: rotate(45deg);
 }
 .portrait-frame::after { transform: rotate(-45deg); }
-.portrait-frame > span { position: relative; z-index: 1; font-family: Georgia, serif; font-size: 100px; line-height: 1; }
-.portrait-frame small { position: absolute; bottom: 18px; left: 18px; letter-spacing: .16em; text-transform: uppercase; font-size: 9px; color: var(--deity-light); }
-.identity-fields { padding: 37px 42px 28px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.portrait-frame > span { position: relative; z-index: 1; font-family: Georgia, serif; font-size: 66px; line-height: 1; }
+.identity-fields { padding: 24px 34px 22px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
 .identity-fields label { display: grid; gap: 5px; min-width: 0; }
 .identity-fields label > span, .maximum-field, .temp-value {
   color: var(--muted);
@@ -178,7 +181,7 @@ input:focus, select:focus, textarea:focus {
   padding: 0;
   border: 0;
   font-family: Georgia, serif;
-  font-size: clamp(42px, 5.4vw, 80px);
+  font-size: clamp(32px, 3.6vw, 52px);
   line-height: 1.02;
   font-weight: 600;
 }
@@ -186,25 +189,25 @@ input:focus, select:focus, textarea:focus {
   display: grid;
   grid-template-columns: minmax(140px, .7fr) 1.5fr 90px;
   gap: 24px;
-  margin-top: 22px;
+  margin-top: 15px;
 }
 .identity-row input, .identity-row select { font-weight: 730; }
 .identity-secondary {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 24px;
-  margin-top: 18px;
+  margin-top: 12px;
 }
 .identity-secondary input { font-size: 12px; }
 
-.combat-dashboard { display: grid; grid-template-columns: 5fr 3fr; }
-.vitals-block { padding: 28px 34px; border-right: 1px solid var(--line); }
+.combat-dashboard { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(330px, 1fr); }
+.vitals-block { padding: 22px 28px; border-right: 1px solid var(--line); }
 .vital-row {
   display: grid;
   grid-template-columns: 220px 72px 1fr 88px;
   align-items: center;
   gap: 18px;
-  min-height: 84px;
+  min-height: 72px;
 }
 .vital-row + .vital-row { border-top: 1px solid var(--line); }
 .number-control { display: grid; grid-template-columns: 1fr 30px 46px auto 30px; align-items: center; gap: 6px; }
@@ -238,19 +241,22 @@ input:focus, select:focus, textarea:focus {
 .temp-meter i { display: block; height: 100%; background: var(--temporary); }
 .temp-meter b { font-size: 11px; }
 .divine-block {
-  padding: 28px 30px;
-  color: #f7f0e5;
+  padding: 20px 24px;
+  color: var(--ink);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--deity) 42%, #161913), #171a15 72%);
+    linear-gradient(90deg, color-mix(in srgb, var(--deity-light) 18%, var(--paper-bright)), var(--paper-bright) 62%);
 }
-.divine-block .number-control button { color: white; border-color: rgba(255,255,255,.25); }
-.divine-block .number-control small { color: rgba(255,255,255,.62); }
-.divine-block .meter { margin: 13px 0 18px; background: rgba(255,255,255,.15); }
-.pips-line { min-height: 43px; display: flex; align-items: center; gap: 12px; border-top: 1px solid rgba(255,255,255,.15); }
+.divine-block .number-control { grid-template-columns: 1fr 30px 40px auto 30px; }
+.divine-block .number-control > span { font-size: 11px; }
+.divine-block .number-control button { color: var(--ink); border-color: var(--line); }
+.divine-block .number-control small { color: var(--muted); }
+.divine-block .meter { height: 9px; margin: 12px 0 10px; background: #d9cfbd; box-shadow: none; }
+.pips-line { min-height: 39px; display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--line); }
 .pips-line > span { margin-right: auto; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
 .pips-line > div { display: flex; gap: 7px; }
-.pips-line button { width: 19px; height: 19px; padding: 0; background: transparent; border: 1px solid rgba(255,255,255,.52); }
-.pips-line button.on { background: var(--deity-light); box-shadow: inset 0 0 0 3px rgba(20,20,15,.18); }
+.pips-line button { width: 20px; height: 20px; padding: 0; background: transparent; border: 1px solid #8d867a; }
+.pips-line button:hover { border-color: var(--deity); }
+.pips-line button.on { background: var(--deity); border-color: var(--deity); box-shadow: inset 0 0 0 3px var(--paper-bright); }
 .pips-line b { font-size: 11px; }
 
 .combat-facts {
@@ -351,17 +357,27 @@ input:focus, select:focus, textarea:focus {
 
 .abilities-section, .equipment-section, .story-section {
   margin-top: 34px;
-  padding: 58px 50px;
+  padding: 34px 42px 42px;
   scroll-margin-top: 100px;
 }
-.abilities-section, .equipment-section {
-  display: grid;
-  grid-template-columns: minmax(260px, 4fr) minmax(0, 8fr);
-  gap: 62px;
+.abilities-section, .equipment-section { display: block; }
+.section-toolbar {
+  min-height: 52px;
+  padding-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
 }
-.section-intro { align-self: start; position: sticky; top: 110px; }
-.section-intro h2 { max-width: 520px; font-size: clamp(42px, 5vw, 70px); }
-.section-intro p { max-width: 390px; margin: 18px 0 0; color: var(--muted); line-height: 1.65; }
+.section-toolbar h2 {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: clamp(26px, 3vw, 38px);
+  line-height: 1;
+  font-weight: 600;
+}
+.ability-categories, .equipment-workspace { width: 100%; }
 .ability-category { border-top: 1px solid var(--line); }
 .category-heading {
   min-height: 112px;
@@ -453,8 +469,7 @@ details[open] > summary .disclosure { transform: rotate(45deg); }
 }
 .empty-state { padding: 25px 0; color: var(--muted); font-size: 12px; }
 
-.equipment-intro .large-add { margin-top: 26px; }
-.equipment-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+.equipment-filters { padding: 16px 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .equipment-filters button {
   padding: 8px 10px;
   color: var(--muted);
@@ -473,11 +488,9 @@ details[open] > summary .disclosure { transform: rotate(45deg); }
 .check-field input { width: 16px; height: 16px; }
 
 .story-section {
-  display: grid;
-  grid-template-columns: minmax(260px, 4fr) minmax(0, 8fr);
-  gap: 62px;
+  display: block;
 }
-.personality-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.personality-grid { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .personality-grid textarea { min-height: 115px; resize: vertical; line-height: 1.5; }
 .personality-grid .wide { grid-column: 1 / -1; }
 .personality-grid .tall textarea { min-height: 210px; }
@@ -501,23 +514,22 @@ footer small, footer p { color: #8c8f85; font-size: 10px; }
 @media (max-width: 1050px) {
   .app-nav { grid-template-columns: 1fr auto; }
   .app-nav nav { display: none; }
-  .hero-identity { grid-template-columns: 130px 1fr; }
+  .hero-identity { grid-template-columns: 104px 1fr; }
   .vital-row { grid-template-columns: 190px 64px 1fr 78px; gap: 12px; }
-  .abilities-section, .equipment-section, .story-section { grid-template-columns: 1fr; gap: 36px; }
-  .section-intro { position: static; }
-  .section-intro h2 { max-width: 760px; }
+  .abilities-section, .equipment-section, .story-section { display: block; }
 }
 
 @media (max-width: 800px) {
   .site-content { width: min(100% - 20px, 720px); padding-top: 14px; }
-  .hero-identity { grid-template-columns: 92px 1fr; min-height: 220px; }
-  .identity-fields { padding: 28px 22px; }
-  .name-field input { font-size: 44px; }
+  .hero-identity { grid-template-columns: 78px 1fr; min-height: 0; }
+  .identity-fields { padding: 20px 20px; }
+  .name-field input { font-size: 37px; }
   .identity-row { grid-template-columns: 1fr 84px; }
   .identity-row label:nth-child(2) { grid-row: 2; grid-column: 1 / -1; }
   .identity-secondary { grid-template-columns: 1fr; gap: 10px; }
   .combat-dashboard { grid-template-columns: 1fr; }
   .vitals-block { border-right: 0; border-bottom: 1px solid var(--line); }
+  .divine-block { border-bottom: 1px solid var(--line); }
   .combat-facts { grid-template-columns: repeat(2, 1fr); }
   .combat-facts > label { grid-column: 1 / -1; }
   .saving-throws > div:last-child { grid-template-columns: repeat(3, 1fr); }
@@ -531,14 +543,26 @@ footer small, footer p { color: #8c8f85; font-size: 10px; }
   .wordmark small, .document-actions > span, .document-actions button:first-of-type { display: none; }
   .document-actions button { padding: 8px; font-size: 8px; }
   .site-content { width: 100%; }
+  .deity-rail { overflow-x: auto; mask-image: none; scrollbar-width: none; }
+  .deity-rail::-webkit-scrollbar { display: none; }
+  .deity-rail > div { animation: none; padding-inline: 12px; gap: 26px; }
   .hero-shell, .stats-layout, .abilities-section, .equipment-section, .story-section { border-left: 0; border-right: 0; }
-  .hero-identity { grid-template-columns: 64px 1fr; }
-  .portrait-frame > span { font-size: 52px; }
-  .portrait-frame small { left: 8px; bottom: 10px; writing-mode: vertical-rl; }
-  .identity-fields { padding: 22px 14px; }
-  .name-field input { font-size: 33px; }
+  .hero-identity { display: block; }
+  .portrait-frame {
+    position: absolute;
+    top: 15px;
+    left: 12px;
+    width: 44px;
+    height: 44px;
+    z-index: 2;
+  }
+  .portrait-frame::before, .portrait-frame::after { width: 58px; }
+  .portrait-frame > span { font-size: 25px; }
+  .identity-fields { padding: 16px 12px 18px; }
+  .name-field { min-height: 44px; padding-left: 56px; }
+  .name-field input { font-size: 28px; }
   .identity-row, .identity-secondary { gap: 8px; }
-  .vitals-block, .divine-block, .saving-throws, .attributes-column, .skills-column { padding: 22px 15px; }
+  .vitals-block, .divine-block, .saving-throws, .attributes-column, .skills-column { padding: 18px 15px; }
   .vital-row { grid-template-columns: 1fr 62px 72px; gap: 10px; padding: 12px 0; }
   .vital-row .bar-group { grid-column: 1 / -1; grid-row: 2; }
   .temp-value { grid-column: 3; grid-row: 1; }
@@ -549,8 +573,10 @@ footer small, footer p { color: #8c8f85; font-size: 10px; }
   .saving-throws button { border-bottom: 1px solid var(--line); }
   .editorial-heading.with-key { align-items: start; flex-direction: column; }
   .skills-grid { grid-template-columns: 1fr; }
-  .abilities-section, .equipment-section, .story-section { padding: 42px 15px; }
-  .section-intro h2 { font-size: 42px; }
+  .abilities-section, .equipment-section, .story-section { padding: 24px 15px 30px; }
+  .section-toolbar { min-height: 46px; align-items: center; }
+  .section-toolbar h2 { font-size: 27px; }
+  .section-toolbar .large-add { padding: 9px 10px; font-size: 8px; }
   .category-heading { grid-template-columns: 1fr 32px; }
   .category-heading button { grid-column: 1 / -1; justify-self: start; }
   .ability-card summary { grid-template-columns: 40px 1fr 24px; }
@@ -560,6 +586,9 @@ footer small, footer p { color: #8c8f85; font-size: 10px; }
   .span-2, .span-full { grid-column: 1; }
   .equipment-item summary { grid-template-columns: 40px 1fr 24px; }
   .equipment-item summary > b { grid-column: 2; padding-bottom: 10px; }
+  .equipment-filters { margin: 0 -15px; padding: 13px 15px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .equipment-filters::-webkit-scrollbar { display: none; }
+  .equipment-filters button { flex: 0 0 auto; }
   .personality-grid { grid-template-columns: 1fr; }
   .personality-grid .wide { grid-column: 1; }
   footer { align-items: start; flex-direction: column; gap: 18px; }
@@ -579,8 +608,7 @@ footer small, footer p { color: #8c8f85; font-size: 10px; }
   .hero-identity { min-height: 45mm; }
   .portrait-frame, .divine-block, .combat-facts, .meter span, .temp-meter i { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .abilities-section, .equipment-section, .story-section { display: block; padding: 7mm; }
-  .section-intro { margin-bottom: 7mm; }
-  .section-intro h2 { font-size: 30px; }
+  .section-toolbar { margin-bottom: 5mm; }
   .ability-card, .equipment-item, .personality-grid label, .attribute-line, .skill-entry { break-inside: avoid; }
   .ability-card:not([open]) > .ability-editor, .equipment-item:not([open]) > .equipment-editor { display: grid; }
   .ability-editor, .equipment-editor { padding: 4mm; }
