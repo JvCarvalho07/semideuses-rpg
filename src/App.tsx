@@ -158,7 +158,7 @@ function AbilitySection({
         <button type="button" onClick={add}>Adicionar</button>
       </div>
       <div className="ability-list">
-        {items.length === 0 && <p className="empty-state">Nenhum item nesta categoria.</p>}
+        {items.length === 0 && <p className="empty-state">Vazio.</p>}
         {items.map((item) => (
           <AbilityEditor
             key={item.id}
@@ -215,15 +215,28 @@ export default function Home() {
   const rootRef = useRef<HTMLElement>(null);
 
   useGSAP(() => {
-    gsap.from(".hero-shell", { opacity: 0, y: 28, duration: 0.75, ease: "power3.out" });
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    gsap.from(".app-nav", { opacity: 0, y: -12, duration: 0.8, ease: "power2.out" });
+    gsap.from(".hero-shell", { opacity: 0, y: 22, scale: 0.992, duration: 1.05, ease: "power3.out" });
     gsap.utils.toArray<HTMLElement>(".reveal-section").forEach((section) => {
       gsap.from(section, {
         opacity: 0,
-        y: 42,
-        duration: 0.7,
-        ease: "power3.out",
-        scrollTrigger: { trigger: section, start: "top 88%", once: true },
+        y: 26,
+        scale: 0.994,
+        duration: 0.95,
+        ease: "power2.out",
+        scrollTrigger: { trigger: section, start: "top 90%", once: true },
       });
+    });
+
+    gsap.from(".ability-category", {
+      opacity: 0,
+      y: 18,
+      stagger: 0.08,
+      duration: 0.7,
+      ease: "power2.out",
+      scrollTrigger: { trigger: ".ability-categories", start: "top 86%", once: true },
     });
   }, { scope: rootRef });
 
@@ -324,7 +337,7 @@ export default function Home() {
   return (
     <main className="app-shell" style={rootStyle} ref={rootRef}>
       <header className="app-nav">
-        <a className="wordmark" href="#inicio"><span>Σ</span><b>SEMIDEUSES</b><small>3ª edição</small></a>
+        <a className="wordmark" href="#inicio"><span>Σ</span><b>SEMIDEUSES</b></a>
         <nav><a href="#combate">Combate</a><a href="#habilidades">Habilidades</a><a href="#equipamentos">Equipamentos</a><a href="#historia">História</a></nav>
         <div className="document-actions">
           <span className={saved ? "save-visible" : ""}>Salvo</span>
@@ -336,16 +349,12 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="deity-rail" aria-hidden="true">
-        <div>{[...Object.keys(FILIATIONS), ...Object.keys(FILIATIONS)].map((name, index) => <span key={`${name}-${index}`}>{name}</span>)}</div>
-      </div>
-
       <div className="site-content" id="inicio">
         <section className="hero-shell">
           <div className="hero-identity">
             <div className="portrait-frame" aria-hidden="true"><span>{sheet.name.slice(0, 1) || "Σ"}</span></div>
             <div className="identity-fields">
-              <label className="name-field"><span>Nome do herói</span><input value={sheet.name} onChange={(event) => patch("name", event.target.value)} /></label>
+              <label className="name-field"><span>Nome do herói</span><input placeholder="Nome do personagem" value={sheet.name} onChange={(event) => patch("name", event.target.value)} /></label>
               <div className="identity-row">
                 <label><span>Filiação</span><select value={sheet.filiation} onChange={(event) => {
                   const name = event.target.value;
@@ -381,8 +390,8 @@ export default function Home() {
             <section className="divine-block">
               <NumberControl label={filiation.resource} value={sheet.divineResource} max={filiation.max} onChange={(value) => patch("divineResource", value)} />
               <ResourceBar value={sheet.divineResource} max={filiation.max} color="var(--deity)" />
-              <div className="pips-line"><span>Favor divino</span><div>{[1, 2, 3, 4, 5].map((value) => <button key={value} type="button" className={value <= sheet.favor ? "on" : ""} onClick={() => patch("favor", sheet.favor === value ? value - 1 : value)} />)}</div></div>
-              <div className="pips-line"><span>Sustentação</span><div>{[1, 2].map((value) => <button key={value} type="button" className={value <= sheet.sustain ? "on" : ""} onClick={() => patch("sustain", sheet.sustain === value ? value - 1 : value)} />)}</div><b>{sheet.sustain}/2</b></div>
+              <div className="pips-line"><span>Favor divino</span><div>{[1, 2, 3, 4, 5].map((value) => <button key={value} type="button" aria-label={`Favor divino ${value}`} className={value <= sheet.favor ? "on" : ""} onClick={() => patch("favor", sheet.favor === value ? value - 1 : value)} />)}</div></div>
+              <div className="pips-line"><span>Sustentação</span><div>{[1, 2].map((value) => <button key={value} type="button" aria-label={`Sustentação ${value}`} className={value <= sheet.sustain ? "on" : ""} onClick={() => patch("sustain", sheet.sustain === value ? value - 1 : value)} />)}</div><b>{sheet.sustain}/2</b></div>
             </section>
 
             <section className="combat-facts">
@@ -405,7 +414,7 @@ export default function Home() {
 
         <section className="stats-layout reveal-section">
           <div className="attributes-column">
-            <div className="editorial-heading"><span>Base</span><h2>Atributos</h2></div>
+            <div className="editorial-heading"><h2>Atributos</h2></div>
             {(Object.keys(ATTRIBUTE_LABELS) as AttributeKey[]).map((key) => (
               <label className="attribute-line" key={key}>
                 <span>{ATTRIBUTE_LABELS[key]}</span>
@@ -415,7 +424,7 @@ export default function Home() {
             ))}
           </div>
           <div className="skills-column">
-            <div className="editorial-heading with-key"><div><span>Toque para alternar</span><h2>Perícias</h2></div><small>vazio · proficiente · especialista</small></div>
+            <div className="editorial-heading with-key"><h2>Perícias</h2><small>toque: proficiente · especialista</small></div>
             <div className="skills-grid">{SKILLS.map(([name, key]) => {
               const rank = sheet.skillRanks[name] || 0;
               return <button type="button" className={`skill-entry rank-${rank}`} key={name} onClick={() => patch("skillRanks", { ...sheet.skillRanks, [name]: (rank + 1) % 3 })}><i /><span>{name}<small>{ATTRIBUTE_LABELS[key]}</small></span><strong>{signed(mods[key] + prof * rank)}</strong></button>;
@@ -468,13 +477,13 @@ export default function Home() {
             <label><span>Traço do antecedente</span><textarea value={sheet.personality.backgroundTrait} onChange={(event) => patchPersonality("backgroundTrait", event.target.value)} /></label>
             <label><span>Vínculo do antecedente</span><textarea value={sheet.personality.backgroundBond} onChange={(event) => patchPersonality("backgroundBond", event.target.value)} /></label>
             <label className="wide"><span>Aparência</span><textarea value={sheet.personality.appearance} onChange={(event) => patchPersonality("appearance", event.target.value)} /></label>
-            <label className="wide tall"><span>História</span><textarea value={sheet.personality.history} onChange={(event) => patchPersonality("history", event.target.value)} /></label>
-            <label className="wide tall"><span>Notas</span><textarea value={sheet.personality.notes} onChange={(event) => patchPersonality("notes", event.target.value)} /></label>
+            <label className="tall"><span>História</span><textarea value={sheet.personality.history} onChange={(event) => patchPersonality("history", event.target.value)} /></label>
+            <label className="tall"><span>Notas</span><textarea value={sheet.personality.notes} onChange={(event) => patchPersonality("notes", event.target.value)} /></label>
           </div>
         </section>
       </div>
 
-      <footer><div><span>Σ</span><strong>{sheet.name}</strong><small>{sheet.filiation} · {sheet.pathName} · nível {sheet.level}</small></div><p>Seus dados ficam salvos neste dispositivo. Exporte o JSON para compartilhar ou guardar uma cópia.</p></footer>
+      <footer><span>Σ</span><p>Dados salvos somente neste navegador. Use JSON para transportar a ficha.</p><a href="#inicio">Voltar ao início</a></footer>
     </main>
   );
 }
