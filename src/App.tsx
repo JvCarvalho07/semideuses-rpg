@@ -61,17 +61,33 @@ function ResourceBar({
   max,
   color,
   temp,
+  label,
+  onChange,
 }: {
   value: number;
   max: number;
   color: string;
   temp?: number;
+  label?: string;
+  onChange?: (value: number) => void;
 }) {
   const percent = Math.min(100, (value / Math.max(max, 1)) * 100);
   const tempPercent = Math.min(100, ((temp || 0) / Math.max(max, 1)) * 100);
   return (
-    <div className="bar-group">
-      <div className="meter"><span style={{ width: `${percent}%`, background: color }} /></div>
+    <div className={`bar-group ${onChange ? "is-adjustable" : ""}`}>
+      <div className="meter">
+        <span style={{ width: `${percent}%`, background: color }} />
+        {onChange && (
+          <input
+            type="range"
+            min={0}
+            max={Math.max(max, 0)}
+            value={Math.min(value, Math.max(max, 0))}
+            aria-label={`Ajustar ${label || "recurso"}`}
+            onInput={(event) => onChange(Number(event.currentTarget.value))}
+          />
+        )}
+      </div>
       {temp !== undefined && (
         <div className="temp-meter">
           <span className="temp-label">PV temporário</span>
@@ -81,6 +97,45 @@ function ResourceBar({
       )}
     </div>
   );
+}
+
+function prepareAvatar(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Selecione um arquivo de imagem."));
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      reject(new Error("A imagem deve ter no máximo 10 MB."));
+      return;
+    }
+
+    const source = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      const size = 512;
+      const scale = Math.max(size / image.width, size / image.height);
+      const width = image.width * scale;
+      const height = image.height * scale;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const context = canvas.getContext("2d");
+      if (!context) {
+        URL.revokeObjectURL(source);
+        reject(new Error("Não foi possível processar a imagem."));
+        return;
+      }
+      context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
+      URL.revokeObjectURL(source);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(source);
+      reject(new Error("Não foi possível abrir a imagem."));
+    };
+    image.src = source;
+  });
 }
 
 function AbilityEditor({
@@ -212,6 +267,7 @@ export default function Home() {
   const [saved, setSaved] = useState(false);
   const [equipmentFilter, setEquipmentFilter] = useState("Todos");
   const importRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLElement>(null);
 
   useGSAP(() => {
@@ -291,6 +347,15 @@ export default function Home() {
     setSheet((current) => ({ ...current, personality: { ...current.personality, [key]: value } }));
   }
 
+  async function setAvatar(file?: File) {
+    if (!file) return;
+    try {
+      patch("avatarDataUrl", await prepareAvatar(file));
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Não foi possível usar esta imagem.");
+    }
+  }
+
   function exportJson() {
     const blob = new Blob([JSON.stringify(sheet, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -352,14 +417,30 @@ export default function Home() {
       <div className="site-content" id="inicio">
         <section className="hero-shell">
           <div className="hero-identity">
-            <div className="portrait-frame" aria-hidden="true"><span>{sheet.name.slice(0, 1) || "Σ"}</span></div>
+            <div
+              className={`portrait-frame ${sheet.avatarDataUrl ? "has-photo" : ""}`}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                void setAvatar(event.dataTransfer.files[0]);
+              }}
+            >
+              {sheet.avatarDataUrl
+                ? <img src={sheet.avatarDataUrl} alt={`Retrato de ${sheet.name || "personagem"}`} />
+                : <span aria-hidden="true">{sheet.name.slice(0, 1) || "Σ"}</span>}
+              <label className="avatar-upload">
+                <span>{sheet.avatarDataUrl ? "Trocar" : "Foto"}</span>
+                <input ref={avatarInputRef} aria-label="Selecionar foto do personagem" type="file" accept="image/*" onChange={(event) => void setAvatar(event.target.files?.[0])} />
+              </label>
+              {sheet.avatarDataUrl && <button type="button" aria-label="Remover foto" className="avatar-remove" onClick={() => patch("avatarDataUrl", "")}>×</button>}
+            </div>
             <div className="identity-fields">
               <label className="name-field"><span>Nome do herói</span><input placeholder="Nome do personagem" value={sheet.name} onChange={(event) => patch("name", event.target.value)} /></label>
               <div className="identity-row">
                 <label><span>Filiação</span><select value={sheet.filiation} onChange={(event) => {
                   const name = event.target.value;
-                  patch("filiation", name);
-                  setSheet((current) => ({ ...current, filiation: name, divineResource: Math.min(current.divineResource, FILIATIONS[name as keyof typeof FILIATIONS].max) }));
+                  const selected = FILIATIONS[name as keyof typeof FILIATIONS];
+                  setSheet((current) => ({ ...current, filiation: name, divineResource: selected ? Math.min(current.divineResource, selected.max) : 0 }));
                 }}>{[<option key="empty" value="">Escolha uma filiação</option>, ...Object.keys(FILIATIONS).map((name) => <option key={name} value={name}>{name}</option>)]}</select></label>
                 <label><span>Caminho</span><input value={sheet.pathName} onChange={(event) => patch("pathName", event.target.value)} /></label>
                 <label><span>Nível</span><input type="number" min={1} max={20} value={sheet.level} onChange={(event) => patch("level", Number(event.target.value))} /></label>
@@ -377,13 +458,13 @@ export default function Home() {
               <div className="vital-row">
                 <NumberControl label="PV" value={sheet.hp} max={sheet.hpMax} onChange={(value) => patch("hp", value)} />
                 <label className="maximum-field">Máximo<input type="number" min={1} value={sheet.hpMax} onChange={(event) => patch("hpMax", Number(event.target.value))} /></label>
-                <ResourceBar value={sheet.hp} max={sheet.hpMax} temp={sheet.hpTemp} color="var(--health)" />
+                <ResourceBar label="PV" value={sheet.hp} max={sheet.hpMax} temp={sheet.hpTemp} color="var(--health)" onChange={(value) => patch("hp", value)} />
                 <label className="temp-value">Temporário<input type="number" min={0} value={sheet.hpTemp} onChange={(event) => patch("hpTemp", Number(event.target.value))} /></label>
               </div>
               <div className="vital-row mana-row">
                 <NumberControl label="MP" value={sheet.mana} max={sheet.manaMax} onChange={(value) => patch("mana", value)} />
                 <label className="maximum-field">Máximo<input type="number" min={1} value={sheet.manaMax} onChange={(event) => patch("manaMax", Number(event.target.value))} /></label>
-                <ResourceBar value={sheet.mana} max={sheet.manaMax} color="var(--mana)" />
+                <ResourceBar label="MP" value={sheet.mana} max={sheet.manaMax} color="var(--mana)" onChange={(value) => patch("mana", value)} />
               </div>
             </section>
 

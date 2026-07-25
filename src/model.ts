@@ -29,6 +29,7 @@ export type Equipment = {
 
 export type CharacterSheet = {
   version: number;
+  avatarDataUrl: string;
   name: string;
   filiation: string;
   pathName: string;
@@ -142,6 +143,7 @@ const ability = (
 
 export const INITIAL_SHEET: CharacterSheet = {
   version: 2,
+  avatarDataUrl: "",
   name: "",
   filiation: "",
   pathName: "",
@@ -178,4 +180,3 @@ export const INITIAL_SHEET: CharacterSheet = {
     notes: "",
   },
 };
-
