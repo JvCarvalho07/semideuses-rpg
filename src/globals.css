@@ -1324,7 +1324,7 @@ footer a:hover { color: var(--deity-light); }
     overflow: visible;
   }
 
-  .hero-shell { break-after: page; }
+  .hero-shell { break-after: avoid-page; }
   .hero-shell::after { right: 5mm; font-size: 28mm; opacity: .72; }
   .hero-identity {
     min-height: 31mm;
@@ -1421,19 +1421,21 @@ footer a:hover { color: var(--deity-light); }
   .saving-throws button strong { font-size: 12pt; }
 
   .stats-layout {
-    margin: 0;
+    margin: 3mm 0 0;
     grid-template-columns: repeat(12, minmax(0, 1fr));
+    break-inside: avoid;
+    break-after: page;
   }
-  .attributes-column { grid-column: span 4; padding: 5mm; }
-  .skills-column { grid-column: span 8; padding: 5mm; }
-  .editorial-heading h2 { font-size: 22pt; }
-  .attribute-line { min-height: 12mm; grid-template-columns: 1fr 14mm 14mm; }
-  .attribute-line:first-of-type, .skills-grid { margin-top: 3mm; }
+  .attributes-column { grid-column: span 4; padding: 3.5mm 4mm; }
+  .skills-column { grid-column: span 8; padding: 3.5mm 4mm; }
+  .editorial-heading h2 { font-size: 18pt; }
+  .attribute-line { min-height: 9.5mm; grid-template-columns: 1fr 13mm 13mm; }
+  .attribute-line:first-of-type, .skills-grid { margin-top: 2mm; }
   .attribute-line input { width: 12mm; font-size: 11pt; }
-  .attribute-line strong { font-size: 18pt; }
+  .attribute-line strong { font-size: 16pt; }
   .skills-grid { grid-template-columns: 1fr 1fr; gap: 0 5mm; }
   .skill-entry {
-    min-height: 8.5mm;
+    min-height: 6.5mm;
     padding: 0 1mm;
   }
   .skill-entry > span { font-size: 7.5pt; }
@@ -1446,7 +1448,7 @@ footer a:hover { color: var(--deity-light); }
     break-before: page;
   }
   .abilities-section {
-    margin-top: 5mm;
+    margin-top: 0;
     break-before: auto;
   }
   .section-toolbar {

@@ -45,6 +45,8 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /type="range"/);
   assert.match(app, /prepareAvatar/);
   assert.match(css, /@media print/);
+  assert.match(css, /\.stats-layout \{[\s\S]*break-inside: avoid;[\s\S]*break-after: page;/);
+  assert.match(css, /\.hero-shell \{ break-after: avoid-page; \}/);
   assert.match(css, /@media \(max-width: 580px\)/);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(readme, /Semideuses RPG é uma criação de João Jota/);
