@@ -270,6 +270,15 @@ function EquipmentEditor({
   );
 }
 
+function normalizeSheet(candidate: CharacterSheet): CharacterSheet {
+  return {
+    ...candidate,
+    version: 2,
+    avatarDataUrl: candidate.avatarDataUrl || "",
+    dracmas: Math.max(0, Number(candidate.dracmas ?? 0)),
+  };
+}
+
 export default function Home() {
   const [sheet, setSheet] = useState<CharacterSheet>(() => ({ ...INITIAL_SHEET }));
   const [hydrated, setHydrated] = useState(false);
@@ -313,7 +322,7 @@ export default function Home() {
     }
     try {
       const parsed = JSON.parse(stored) as CharacterSheet;
-      if (parsed.version === 2) setSheet(parsed);
+      if (parsed.version === 2) setSheet(normalizeSheet(parsed));
     } catch {
       localStorage.removeItem("semideuses-sheet-v3");
     } finally {
@@ -393,7 +402,7 @@ export default function Home() {
       try {
         const imported = JSON.parse(String(reader.result)) as CharacterSheet;
         if (!imported.attributes || !imported.abilityGroups || !imported.equipment || !imported.personality) throw new Error("Formato inválido");
-        setSheet({ ...imported, version: 2 });
+        setSheet(normalizeSheet(imported));
       } catch {
         window.alert("Este arquivo não contém uma ficha compatível.");
       }
@@ -558,9 +567,21 @@ export default function Home() {
         </section>
 
         <section className="equipment-section reveal-section" id="equipamentos">
-          <div className="section-toolbar">
+          <div className="section-toolbar equipment-toolbar">
             <h2>Equipamentos</h2>
-            <button type="button" className="large-add" onClick={() => patch("equipment", [...sheet.equipment, { id: makeId("eq"), name: "", type: "Outro", quantity: 1, equipped: false, armorClass: 0, attack: "", damage: "", properties: "", notes: "" }])}>Adicionar equipamento</button>
+            <div className="equipment-actions">
+              <label className="currency-field">
+                <span>Dracmas</span>
+                <input
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  value={sheet.dracmas}
+                  onChange={(event) => patch("dracmas", Math.max(0, Number(event.target.value)))}
+                />
+              </label>
+              <button type="button" className="large-add" onClick={() => patch("equipment", [...sheet.equipment, { id: makeId("eq"), name: "", type: "Outro", quantity: 1, equipped: false, armorClass: 0, attack: "", damage: "", properties: "", notes: "" }])}>Adicionar equipamento</button>
+            </div>
           </div>
           <div className="equipment-workspace">
             <div className="equipment-filters">{["Todos", ...EQUIPMENT_TYPES].map((type) => <button type="button" key={type} className={equipmentFilter === type ? "active" : ""} onClick={() => setEquipmentFilter(type)}>{type}</button>)}</div>
@@ -608,7 +629,24 @@ export default function Home() {
         </section>
       </div>
 
-      <footer><span>Σ</span><p>Dados salvos somente neste navegador. Use JSON para transportar a ficha.</p><a href="#inicio">Voltar ao início</a></footer>
+      <footer>
+        <span>Σ</span>
+        <p>Dados salvos somente neste navegador. Use JSON para transportar a ficha.</p>
+        <a
+          className="support-link"
+          href="https://github.com/JvCarvalho07/semideuses-rpg"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Apoiar o projeto no GitHub com uma estrela"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M12 .8a11.4 11.4 0 0 0-3.6 22.2c.6.1.8-.2.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.4 3.5 1.1.1-.8.4-1.4.8-1.7-2.7-.3-5.5-1.3-5.5-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.1 1.2a10.8 10.8 0 0 1 5.7 0c2.2-1.5 3.1-1.2 3.1-1.2.6 1.5.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.8 5.4-5.5 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6A11.4 11.4 0 0 0 12 .8Z" />
+          </svg>
+          <span>Apoiar</span>
+          <span className="support-tooltip" role="tooltip">Gostou da ficha? Se quiser apoiar o projeto, deixe uma estrela no GitHub.</span>
+        </a>
+        <a href="#inicio">Voltar ao início</a>
+      </footer>
     </main>
   );
 }

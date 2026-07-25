@@ -52,6 +52,7 @@ export type CharacterSheet = {
   speed: number;
   initiativeExtra: number;
   caExtra: number;
+  dracmas: number;
   abilityGroups: Record<AbilityCategory, Ability[]>;
   equipment: Equipment[];
   personality: {
@@ -166,6 +167,7 @@ export const INITIAL_SHEET: CharacterSheet = {
   speed: 0,
   initiativeExtra: 0,
   caExtra: 0,
+  dracmas: 0,
   abilityGroups: { abilities: [], filiation: [], path: [], skills: [], talents: [] },
   equipment: [],
   personality: {

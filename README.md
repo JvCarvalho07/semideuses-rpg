@@ -1,44 +1,34 @@
 # Semideuses RPG — Ficha Digital
 
-Ficha de personagem estática, responsiva e sem backend. Os dados ficam apenas
-no `localStorage` deste navegador. Para levar uma ficha a outro aparelho, use
-`JSON` e `Importar`; `PDF` abre a impressão nativa do navegador, que pode ser
-salva como PDF em quantas páginas forem necessárias.
+Uma ficha digital feita por um desenvolvedor para quem joga **Semideuses RPG**.
+Organize o personagem, acompanhe recursos durante a sessão e leve a ficha para
+qualquer dispositivo sem depender de conta ou servidor.
 
-## Rodar localmente
+## Abra a ficha
 
-Requer Node.js 22 ou mais recente.
+**[Usar a ficha digital](https://jvcarvalho07.github.io/semideuses-rpg/)**
 
-```bash
-npm install
-npm run dev
-```
+A ficha começa vazia, salva os dados somente no navegador e permite
+exportar/importar JSON. A versão em PDF é organizada automaticamente em quantas
+páginas o conteúdo precisar.
 
-Para validar a versão de produção:
+## O que você encontra
 
-```bash
-npm run build
-npm run preview
-```
+- Temas próprios para cada filiação.
+- Avatar, PV, PV temporário, mana, recurso divino, Favor Divino e sustentação.
+- Testes de resistência, atributos, perícias e cálculo transparente de CA.
+- Skills, habilidades, talentos e caminhos sem limite de entradas.
+- Equipamentos, itens equipados e controle de Dracmas.
+- Antecedentes, traços, aparência, história e notas.
+- Layout responsivo para computador e celular.
 
-## Publicar no GitHub Pages
+## Apoie o projeto
 
-O workflow em `.github/workflows/deploy-pages.yml` compila a aplicação e
-publica o diretório `dist` pelo GitHub Actions. Depois de criar ou conectar o
-repositório, deixe Pages configurado como **GitHub Actions**. O `base path` é
-calculado pelo nome do repositório no workflow, então os assets funcionam em
-`https://USUARIO.github.io/NOME-DO-REPOSITORIO/`.
+Se esta ficha ajudou a sua mesa, você pode
+**[deixar uma estrela no repositório](https://github.com/JvCarvalho07/semideuses-rpg)**.
+É opcional, mas ajuda outras pessoas a encontrarem o projeto.
 
-## Recursos
+## Créditos
 
-- Ficha inicial deliberadamente vazia; exemplos não são carregados por padrão.
-- Filiações completas do material usado no projeto, sem Héstia, com tema e
-  recurso próprio por filiação.
-- PV, PV temporário e mana em barras separadas; Favor Divino em cinco caixas.
-- Testes de resistência, atributos, perícias, antecedentes, traços, história e
-  notas.
-- Skills, habilidades gerais, habilidades de filiação, caminho divino e
-  talentos ilimitados, cada um com rank, custo, ação, alcance, duração,
-  recarga e descrição.
-- Inventário ilimitado com tipo, quantidade, equipar/remover e cálculo
-  transparente da CA a partir de armaduras, escudos e bônus equipados.
+**Semideuses RPG é uma criação de João Jota.** Esta ficha é um projeto
+independente feito com carinho para apoiar a comunidade e facilitar as sessões.
