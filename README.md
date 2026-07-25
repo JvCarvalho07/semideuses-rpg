@@ -17,7 +17,8 @@ páginas o conteúdo precisar.
 - Temas próprios para cada filiação.
 - Avatar, PV, PV temporário, mana, recurso divino, Favor Divino e sustentação.
 - Testes de resistência, atributos, perícias e cálculo transparente de CA.
-- Skills, habilidades, talentos e caminhos sem limite de entradas.
+- Raça e origem separadas, sem limitar personagens especiais ou expansões.
+- Skills, habilidades, talentos, Caminho Divino e Caminho da Lenda sem limite de entradas.
 - Equipamentos, itens equipados e controle de Dracmas.
 - Antecedentes, traços, aparência, história e notas.
 - Layout responsivo para computador e celular.

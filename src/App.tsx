@@ -21,6 +21,7 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const ABILITY_ORDER = Object.keys(ABILITY_META) as AbilityCategory[];
 const EQUIPMENT_TYPES = ["Arma", "Armadura", "Escudo", "Ferramenta", "Acessório", "Relíquia", "Consumível", "Outro"];
+const RACE_SUGGESTIONS = ["Semideus Grego", "Sátiro", "Ciclope", "Mortal Vidente", "Legado"];
 
 function modifier(score: number) {
   return Math.floor((score - 10) / 2);
@@ -275,7 +276,16 @@ function normalizeSheet(candidate: CharacterSheet): CharacterSheet {
     ...candidate,
     version: 2,
     avatarDataUrl: candidate.avatarDataUrl || "",
+    race: candidate.race || "",
     dracmas: Math.max(0, Number(candidate.dracmas ?? 0)),
+    abilityGroups: {
+      abilities: candidate.abilityGroups?.abilities || [],
+      filiation: candidate.abilityGroups?.filiation || [],
+      path: candidate.abilityGroups?.path || [],
+      skills: candidate.abilityGroups?.skills || [],
+      talents: candidate.abilityGroups?.talents || [],
+      legend: candidate.abilityGroups?.legend || [],
+    },
   };
 }
 
@@ -417,7 +427,7 @@ export default function Home() {
       ...INITIAL_SHEET,
       name: "",
       player: "",
-      abilityGroups: { abilities: [], filiation: [], path: [], skills: [], talents: [] },
+      abilityGroups: { abilities: [], filiation: [], path: [], skills: [], talents: [], legend: [] },
       equipment: [],
       personality: { trait: "", ideal: "", bond: "", flaw: "", backgroundTrait: "", backgroundBond: "", appearance: "", history: "", notes: "" },
     });
@@ -476,14 +486,16 @@ export default function Home() {
             <div className="identity-fields">
               <label className="name-field"><span>Nome do herói</span><input placeholder="Nome do personagem" value={sheet.name} onChange={(event) => patch("name", event.target.value)} /></label>
               <div className="identity-row">
-                <label><span>Filiação</span><select value={sheet.filiation} onChange={(event) => {
+                <label className="identity-filiation"><span>Filiação</span><select value={sheet.filiation} onChange={(event) => {
                   const name = event.target.value;
                   const selected = FILIATIONS[name as keyof typeof FILIATIONS];
                   setSheet((current) => ({ ...current, filiation: name, divineResource: selected ? Math.min(current.divineResource, selected.max) : 0 }));
                 }}>{[<option key="empty" value="">Escolha uma filiação</option>, ...Object.keys(FILIATIONS).map((name) => <option key={name} value={name}>{name}</option>)]}</select></label>
-                <label><span>Caminho</span><input value={sheet.pathName} onChange={(event) => patch("pathName", event.target.value)} /></label>
-                <label><span>Nível</span><input type="number" min={1} max={20} value={sheet.level} onChange={(event) => patch("level", Number(event.target.value))} /></label>
+                <label className="identity-path"><span>Caminho divino</span><input value={sheet.pathName} onChange={(event) => patch("pathName", event.target.value)} /></label>
+                <label className="identity-race"><span>Raça</span><input list="race-options" placeholder="Ex.: Semideus Grego" value={sheet.race} onChange={(event) => patch("race", event.target.value)} /></label>
+                <label className="identity-level"><span>Nível</span><input type="number" min={1} value={sheet.level} onChange={(event) => patch("level", Math.max(1, Number(event.target.value)))} /></label>
               </div>
+              <datalist id="race-options">{RACE_SUGGESTIONS.map((race) => <option key={race} value={race} />)}</datalist>
               <div className="identity-secondary">
                 <label><span>Origem</span><input value={sheet.origin} onChange={(event) => patch("origin", event.target.value)} /></label>
                 <label><span>Antecedente</span><input value={sheet.background} onChange={(event) => patch("background", event.target.value)} /></label>

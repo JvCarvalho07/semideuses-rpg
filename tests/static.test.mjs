@@ -14,8 +14,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(html, /Semideuses RPG — Ficha Digital/);
   assert.doesNotMatch(html, /Héctor Vance|João Victor/);
   assert.match(model, /name: "",/);
+  assert.match(model, /race: "",/);
   assert.match(model, /avatarDataUrl: "",/);
-  assert.match(model, /abilityGroups: \{ abilities: \[\], filiation: \[\], path: \[\], skills: \[\], talents: \[\] \}/);
+  assert.match(model, /abilityGroups: \{ abilities: \[\], filiation: \[\], path: \[\], skills: \[\], talents: \[\], legend: \[\] \}/);
   assert.match(model, /equipment: \[\],/);
   assert.match(model, /dracmas: 0,/);
   assert.doesNotMatch(model, /Héstia|Hestia/);
@@ -26,6 +27,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /Testes de resistência/);
   assert.match(app, /Adicionar equipamento/);
   assert.match(app, /normalizeSheet/);
+  assert.match(app, /Caminho divino/);
+  assert.match(app, /Raça/);
+  assert.match(app, /Mortal Vidente/);
   assert.match(app, /Apoiar o projeto no GitHub com uma estrela/);
   assert.match(app, /type="range"/);
   assert.match(app, /prepareAvatar/);

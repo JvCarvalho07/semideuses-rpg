@@ -16,7 +16,27 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 84px;
+  scrollbar-gutter: stable;
+  scrollbar-color: #bd8b48 #06171c;
+  scrollbar-width: thin;
+}
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-button { width: 0; height: 0; display: none; }
+::-webkit-scrollbar-track { background: #06171c; }
+::-webkit-scrollbar-thumb {
+  min-height: 42px;
+  background: linear-gradient(180deg, #d7ad6b, #9f6938);
+  border: 3px solid #06171c;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #edc985, #ba7b42); }
+textarea { scrollbar-color: #b9863f var(--paper-bright); }
+textarea::-webkit-scrollbar { width: 10px; }
+textarea::-webkit-scrollbar-track { background: var(--paper-bright); border-radius: 999px; }
+textarea::-webkit-scrollbar-thumb { background: #b9863f; border: 3px solid var(--paper-bright); }
 body {
   margin: 0;
   background: var(--night);
@@ -259,10 +279,14 @@ input:focus, select:focus, textarea:focus {
 .name-field input::placeholder { color: #aaa28f; opacity: .72; }
 .identity-row {
   display: grid;
-  grid-template-columns: minmax(140px, .7fr) 1.5fr 90px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 24px;
   margin-top: 10px;
 }
+.identity-filiation { grid-column: span 3; }
+.identity-path { grid-column: span 4; }
+.identity-race { grid-column: span 3; }
+.identity-level { grid-column: span 2; }
 .identity-row input, .identity-row select { font-weight: 730; }
 .identity-secondary {
   display: grid;
@@ -489,6 +513,7 @@ input:focus, select:focus, textarea:focus {
   padding: 28px 32px 34px;
   scroll-margin-top: 82px;
 }
+#inicio, #combate, #habilidades, #equipamentos, #historia { scroll-margin-top: 82px; }
 .abilities-section, .equipment-section { display: block; }
 .section-toolbar {
   min-height: 48px;
@@ -529,11 +554,21 @@ input:focus, select:focus, textarea:focus {
   border-color: color-mix(in srgb, var(--deity-secondary) 44%, var(--line));
   box-shadow: inset 4px 0 0 color-mix(in srgb, var(--deity-secondary) 68%, var(--bronze));
 }
+.ability-category.category-legend {
+  grid-column: 1 / -1;
+  border-color: color-mix(in srgb, var(--bronze) 72%, var(--line));
+  box-shadow: inset 4px 0 0 var(--bronze);
+}
 .category-filiation .category-heading {
   background: linear-gradient(100deg, color-mix(in srgb, var(--deity-light) 16%, transparent), transparent 72%);
 }
 .category-path .category-heading {
   background: linear-gradient(100deg, color-mix(in srgb, var(--deity-secondary) 10%, transparent), transparent 72%);
+}
+.category-legend .category-heading {
+  background:
+    linear-gradient(100deg, rgba(185, 134, 63, .18), transparent 72%),
+    linear-gradient(180deg, color-mix(in srgb, var(--deity-deep) 4%, transparent), transparent);
 }
 .ability-category:first-child { grid-column: 1 / -1; }
 .category-heading {
@@ -767,8 +802,10 @@ footer a:hover { color: var(--deity-light); }
   .hero-identity { grid-template-columns: 78px 1fr; min-height: 0; }
   .identity-fields { padding: 20px 20px; }
   .name-field input { font-size: 37px; }
-  .identity-row { grid-template-columns: 1fr 84px; }
-  .identity-row label:nth-child(2) { grid-row: 2; grid-column: 1 / -1; }
+  .identity-row { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+  .identity-filiation, .identity-race { grid-column: span 3; }
+  .identity-path { grid-column: span 5; }
+  .identity-level { grid-column: span 1; }
   .identity-secondary { grid-template-columns: 1fr; gap: 10px; }
   .combat-dashboard { grid-template-columns: 1fr; }
   .vitals-block, .divine-block { grid-column: 1 / -1; }
@@ -786,6 +823,7 @@ footer a:hover { color: var(--deity-light); }
 }
 
 @media (max-width: 580px) {
+  html { scrollbar-gutter: auto; }
   .app-nav {
     min-height: 58px;
     padding: 7px 10px;
@@ -818,6 +856,10 @@ footer a:hover { color: var(--deity-light); }
   .name-field { min-height: 56px; padding-left: 68px; }
   .name-field input { font-size: 26px; }
   .identity-row, .identity-secondary { gap: 8px; }
+  .identity-row { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .identity-filiation, .identity-race { grid-column: span 3; }
+  .identity-path { grid-column: span 5; }
+  .identity-level { grid-column: span 1; }
   .identity-secondary { grid-template-columns: 1fr 1fr; }
   .identity-secondary label:last-child { grid-column: 1 / -1; }
   .vitals-block, .divine-block, .saving-throws, .attributes-column, .skills-column { padding: 18px 15px; }
@@ -938,10 +980,15 @@ footer a:hover { color: var(--deity-light); }
   .portrait-frame > span { font-size: 12mm; }
   .identity-fields { padding: 4mm 5mm 3.5mm; }
   .name-field input { font-size: 24pt; line-height: 1; }
-  .identity-row { margin-top: 2mm; gap: 5mm; grid-template-columns: minmax(32mm, .7fr) 1.5fr 18mm; }
-  .identity-secondary { margin-top: 1.5mm; gap: 5mm; }
+  .identity-row { margin-top: 2mm; gap: 3mm; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .identity-filiation { grid-column: span 3; }
+  .identity-path { grid-column: span 4; }
+  .identity-race { grid-column: span 3; }
+  .identity-level { grid-column: span 2; }
+  .identity-secondary { margin-top: 1.5mm; gap: 5mm; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .identity-fields label > span { font-size: 6.5pt; }
   .identity-fields input, .identity-fields select { padding: 1mm 0; font-size: 8.5pt; }
+  .identity-fields input::placeholder { color: transparent; }
 
   .combat-dashboard { grid-template-columns: repeat(12, minmax(0, 1fr)); }
   .vitals-block { grid-column: span 8; padding: 3.5mm 4mm; }
