@@ -22,7 +22,7 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 const ABILITY_ORDER = Object.keys(ABILITY_META) as AbilityCategory[];
 const EQUIPMENT_TYPES = ["Arma", "Armadura", "Escudo", "Ferramenta", "Acessório", "Relíquia", "Consumível", "Outro"];
 const ORIGIN_SUGGESTIONS = ["Semideus Grego", "Sátiro", "Ciclope", "Mortal Vidente", "Legado"];
-type PrintFormat = "A4" | "A3";
+type PrintFormat = "A4" | "A3" | "A5";
 const LEGEND_CHOICES = [
   {
     value: "O Voto",
@@ -60,8 +60,9 @@ function proficiency(level: number) {
 
 function initialPrintFormat(): PrintFormat {
   const queryFormat = new URLSearchParams(window.location.search).get("paper");
-  if (queryFormat === "A3" || queryFormat === "A4") return queryFormat;
-  return localStorage.getItem("semideuses-print-format") === "A3" ? "A3" : "A4";
+  if (queryFormat === "A3" || queryFormat === "A4" || queryFormat === "A5") return queryFormat;
+  const storedFormat = localStorage.getItem("semideuses-print-format");
+  return storedFormat === "A3" || storedFormat === "A5" ? storedFormat : "A4";
 }
 
 function NumberControl({
@@ -399,7 +400,11 @@ export default function Home() {
       pageStyle.id = pageStyleId;
       document.head.appendChild(pageStyle);
     }
-    const margins = printFormat === "A3" ? "12mm 14mm 15mm" : "9mm 10mm 11mm";
+    const margins = printFormat === "A3"
+      ? "12mm 14mm 15mm"
+      : printFormat === "A5"
+        ? "6mm 7mm 8mm"
+        : "9mm 10mm 11mm";
     pageStyle.textContent = `@media print { @page { size: ${printFormat} portrait; margin: ${margins}; } }`;
 
     return () => pageStyle?.remove();
@@ -548,6 +553,7 @@ export default function Home() {
             <select aria-label="Formato do PDF" value={printFormat} onChange={(event) => setPrintFormat(event.target.value as PrintFormat)}>
               <option value="A4">A4</option>
               <option value="A3">A3</option>
+              <option value="A5">A5</option>
             </select>
           </label>
           <button type="button" className="primary-action" onClick={printSheet}>PDF</button>

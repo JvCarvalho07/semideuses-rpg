@@ -1347,6 +1347,9 @@ footer a:hover { color: var(--deity-light); }
 
   .print-only { display: block !important; }
   .site-content { width: 100%; margin: 0; padding: 0; }
+  html[data-print-size="A5"] .site-content {
+    zoom: .7;
+  }
 
   .hero-shell,
   .stats-layout,
