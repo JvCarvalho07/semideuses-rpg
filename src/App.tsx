@@ -149,29 +149,39 @@ function AbilityEditor({
 }) {
   const update = (key: keyof Ability, value: string | number) => onUpdate({ ...ability, [key]: value });
   return (
-    <details className="ability-card" open={!ability.name || undefined}>
-      <summary>
-        <span className="ability-rank">{ability.rank || "—"}</span>
-        <span>
-          <strong>{ability.name || "Nova habilidade"}</strong>
-          <small>Nível {ability.level || 1} · {ability.activation || "Ativação não definida"}</small>
-        </span>
-        <span className="ability-cost">{ability.cost || "Sem custo"}</span>
-        <span className="disclosure">+</span>
-      </summary>
-      <div className="ability-editor">
-        <label className="span-2">Nome<input value={ability.name} onChange={(event) => update("name", event.target.value)} /></label>
-        <label>Nível<input type="number" min={1} value={ability.level} onChange={(event) => update("level", Number(event.target.value))} /></label>
-        <label>Rank<input value={ability.rank} onChange={(event) => update("rank", event.target.value)} /></label>
-        <label>Custo<input value={ability.cost} onChange={(event) => update("cost", event.target.value)} /></label>
-        <label>Ativação<input value={ability.activation} onChange={(event) => update("activation", event.target.value)} /></label>
-        <label>Alcance<input value={ability.range} onChange={(event) => update("range", event.target.value)} /></label>
-        <label>Duração<input value={ability.duration} onChange={(event) => update("duration", event.target.value)} /></label>
-        <label>Recarga<input value={ability.recharge} onChange={(event) => update("recharge", event.target.value)} /></label>
-        <label className="span-full">Descrição<textarea value={ability.description} onChange={(event) => update("description", event.target.value)} /></label>
-        <button type="button" className="remove-action" onClick={onRemove}>Remover habilidade</button>
+    <div className="ability-unit">
+      <details className="ability-card" open={!ability.name || undefined}>
+        <summary>
+          <span className="ability-rank">{ability.rank || "—"}</span>
+          <span>
+            <strong>{ability.name || "Nova habilidade"}</strong>
+            <small>Nível {ability.level || 1} · {ability.activation || "Ativação não definida"}</small>
+          </span>
+          <span className="ability-cost">{ability.cost || "Sem custo"}</span>
+          <span className="disclosure">+</span>
+        </summary>
+        <div className="ability-editor">
+          <label className="span-2">Nome<input value={ability.name} onChange={(event) => update("name", event.target.value)} /></label>
+          <label>Nível<input type="number" min={1} value={ability.level} onChange={(event) => update("level", Number(event.target.value))} /></label>
+          <label>Rank<input value={ability.rank} onChange={(event) => update("rank", event.target.value)} /></label>
+          <label>Custo<input value={ability.cost} onChange={(event) => update("cost", event.target.value)} /></label>
+          <label>Ativação<input value={ability.activation} onChange={(event) => update("activation", event.target.value)} /></label>
+          <label>Alcance<input value={ability.range} onChange={(event) => update("range", event.target.value)} /></label>
+          <label>Duração<input value={ability.duration} onChange={(event) => update("duration", event.target.value)} /></label>
+          <label>Recarga<input value={ability.recharge} onChange={(event) => update("recharge", event.target.value)} /></label>
+          <label className="span-full">Descrição<textarea value={ability.description} onChange={(event) => update("description", event.target.value)} /></label>
+          <button type="button" className="remove-action" onClick={onRemove}>Remover habilidade</button>
+        </div>
+      </details>
+      <div className="ability-print print-only">
+        <div className="print-meta">
+          {ability.range && <span>Alcance {ability.range}</span>}
+          {ability.duration && <span>Duração {ability.duration}</span>}
+          {ability.recharge && <span>Recarga {ability.recharge}</span>}
+        </div>
+        {ability.description && <p>{ability.description}</p>}
       </div>
-    </details>
+    </div>
   );
 }
 
@@ -207,7 +217,6 @@ function AbilitySection({
       <div className="category-heading">
         <div>
           <h3>{meta.title}</h3>
-          <p>{meta.description}</p>
         </div>
         <span>{items.length}</span>
         <button type="button" onClick={add}>Adicionar</button>
@@ -320,7 +329,15 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, [hydrated, sheet]);
 
-  const filiation = FILIATIONS[sheet.filiation as keyof typeof FILIATIONS] || { resource: "Recurso da filiação", max: 10, accent: "#826c4a", light: "#d6b77c" };
+  const filiation = FILIATIONS[sheet.filiation as keyof typeof FILIATIONS] || {
+    resource: "Recurso da filiação",
+    max: 10,
+    accent: "#b9863f",
+    light: "#e8ca8c",
+    deep: "#172d32",
+    secondary: "#0e6172",
+    mark: "Σ",
+  };
   const prof = proficiency(sheet.level);
   const mods = useMemo(
     () => Object.fromEntries(Object.entries(sheet.attributes).map(([key, score]) => [key, modifier(score)])) as Record<AttributeKey, number>,
@@ -337,6 +354,8 @@ export default function Home() {
   const rootStyle = {
     "--deity": filiation.accent,
     "--deity-light": filiation.light,
+    "--deity-deep": filiation.deep,
+    "--deity-secondary": filiation.secondary,
   } as React.CSSProperties;
 
   function patch<K extends keyof CharacterSheet>(key: K, value: CharacterSheet[K]) {
@@ -395,12 +414,23 @@ export default function Home() {
     });
   }
 
+  function printSheet() {
+    setEquipmentFilter("Todos");
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.print()));
+  }
+
   const filteredEquipment = equipmentFilter === "Todos"
     ? sheet.equipment
     : sheet.equipment.filter((item) => item.type === equipmentFilter);
 
   return (
-    <main className="app-shell" style={rootStyle} ref={rootRef}>
+    <main
+      className="app-shell"
+      data-filiation={sheet.filiation || "Sem filiação"}
+      data-deity-mark={filiation.mark}
+      style={rootStyle}
+      ref={rootRef}
+    >
       <header className="app-nav">
         <a className="wordmark" href="#inicio"><span>Σ</span><b>SEMIDEUSES</b></a>
         <nav><a href="#combate">Combate</a><a href="#habilidades">Habilidades</a><a href="#equipamentos">Equipamentos</a><a href="#historia">História</a></nav>
@@ -409,13 +439,13 @@ export default function Home() {
           <button type="button" onClick={newSheet}>Nova</button>
           <button type="button" onClick={() => importRef.current?.click()}>Importar</button>
           <button type="button" onClick={exportJson}>JSON</button>
-          <button type="button" className="primary-action" onClick={() => window.print()}>PDF</button>
+          <button type="button" className="primary-action" onClick={printSheet}>PDF</button>
           <input ref={importRef} type="file" accept=".json,application/json" hidden onChange={importJson} />
         </div>
       </header>
 
       <div className="site-content" id="inicio">
-        <section className="hero-shell">
+        <section className="hero-shell" data-deity-mark={filiation.mark}>
           <div className="hero-identity">
             <div
               className={`portrait-frame ${sheet.avatarDataUrl ? "has-photo" : ""}`}
@@ -545,21 +575,35 @@ export default function Home() {
                 />
               ))}
             </div>
+            <div className="print-equipment-list print-only">
+              {sheet.equipment.map((item) => (
+                <article key={`print-${item.id}`}>
+                  <header><strong>{item.name || "Equipamento sem nome"}</strong><span>{item.type} · qtd. {item.quantity}{item.equipped ? " · equipado" : ""}</span></header>
+                  <dl>
+                    {item.armorClass !== 0 && <><dt>CA</dt><dd>{signed(item.armorClass)}</dd></>}
+                    {item.attack && <><dt>Ataque</dt><dd>{item.attack}</dd></>}
+                    {item.damage && <><dt>Dano</dt><dd>{item.damage}</dd></>}
+                    {item.properties && <><dt>Propriedades</dt><dd>{item.properties}</dd></>}
+                    {item.notes && <><dt>Notas</dt><dd>{item.notes}</dd></>}
+                  </dl>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
         <section className="story-section reveal-section" id="historia">
           <div className="section-toolbar"><h2>História e traços</h2></div>
           <div className="personality-grid">
-            <label><span>Traço</span><textarea value={sheet.personality.trait} onChange={(event) => patchPersonality("trait", event.target.value)} /></label>
-            <label><span>Ideal</span><textarea value={sheet.personality.ideal} onChange={(event) => patchPersonality("ideal", event.target.value)} /></label>
-            <label><span>Vínculo</span><textarea value={sheet.personality.bond} onChange={(event) => patchPersonality("bond", event.target.value)} /></label>
-            <label><span>Falha</span><textarea value={sheet.personality.flaw} onChange={(event) => patchPersonality("flaw", event.target.value)} /></label>
-            <label><span>Traço do antecedente</span><textarea value={sheet.personality.backgroundTrait} onChange={(event) => patchPersonality("backgroundTrait", event.target.value)} /></label>
-            <label><span>Vínculo do antecedente</span><textarea value={sheet.personality.backgroundBond} onChange={(event) => patchPersonality("backgroundBond", event.target.value)} /></label>
-            <label className="wide"><span>Aparência</span><textarea value={sheet.personality.appearance} onChange={(event) => patchPersonality("appearance", event.target.value)} /></label>
-            <label className="tall"><span>História</span><textarea value={sheet.personality.history} onChange={(event) => patchPersonality("history", event.target.value)} /></label>
-            <label className="tall"><span>Notas</span><textarea value={sheet.personality.notes} onChange={(event) => patchPersonality("notes", event.target.value)} /></label>
+            <label><span>Traço</span><textarea value={sheet.personality.trait} onChange={(event) => patchPersonality("trait", event.target.value)} /><div className="print-value print-only">{sheet.personality.trait || "—"}</div></label>
+            <label><span>Ideal</span><textarea value={sheet.personality.ideal} onChange={(event) => patchPersonality("ideal", event.target.value)} /><div className="print-value print-only">{sheet.personality.ideal || "—"}</div></label>
+            <label><span>Vínculo</span><textarea value={sheet.personality.bond} onChange={(event) => patchPersonality("bond", event.target.value)} /><div className="print-value print-only">{sheet.personality.bond || "—"}</div></label>
+            <label><span>Falha</span><textarea value={sheet.personality.flaw} onChange={(event) => patchPersonality("flaw", event.target.value)} /><div className="print-value print-only">{sheet.personality.flaw || "—"}</div></label>
+            <label><span>Traço do antecedente</span><textarea value={sheet.personality.backgroundTrait} onChange={(event) => patchPersonality("backgroundTrait", event.target.value)} /><div className="print-value print-only">{sheet.personality.backgroundTrait || "—"}</div></label>
+            <label><span>Vínculo do antecedente</span><textarea value={sheet.personality.backgroundBond} onChange={(event) => patchPersonality("backgroundBond", event.target.value)} /><div className="print-value print-only">{sheet.personality.backgroundBond || "—"}</div></label>
+            <label className="wide"><span>Aparência</span><textarea value={sheet.personality.appearance} onChange={(event) => patchPersonality("appearance", event.target.value)} /><div className="print-value print-only">{sheet.personality.appearance || "—"}</div></label>
+            <label className="tall"><span>História</span><textarea value={sheet.personality.history} onChange={(event) => patchPersonality("history", event.target.value)} /><div className="print-value print-only">{sheet.personality.history || "—"}</div></label>
+            <label className="tall"><span>Notas</span><textarea value={sheet.personality.notes} onChange={(event) => patchPersonality("notes", event.target.value)} /><div className="print-value print-only">{sheet.personality.notes || "—"}</div></label>
           </div>
         </section>
       </div>

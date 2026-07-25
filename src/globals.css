@@ -21,7 +21,7 @@ body {
   margin: 0;
   background: var(--night);
   color: var(--ink);
-  font-family: "Satoshi", Arial, sans-serif;
+  font-family: "Geist", "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -36,13 +36,16 @@ input:focus, select:focus, textarea:focus {
 .app-shell {
   --deity: #d4483f;
   --deity-light: #f0a06f;
+  --deity-deep: #172d32;
+  --deity-secondary: #0e6172;
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 5% 0%, color-mix(in srgb, var(--terracotta) 22%, transparent), transparent 33rem),
-    radial-gradient(circle at 92% 18%, color-mix(in srgb, var(--aegean) 28%, transparent), transparent 34rem),
-    linear-gradient(180deg, #0b252d 0, var(--night) 48rem, #0a2026 100%);
+    radial-gradient(circle at 4% 2%, color-mix(in srgb, var(--deity) 28%, transparent), transparent 32rem),
+    radial-gradient(circle at 96% 15%, color-mix(in srgb, var(--deity-secondary) 34%, transparent), transparent 38rem),
+    linear-gradient(160deg, color-mix(in srgb, var(--deity-deep) 74%, #071a21) 0, #071a21 42rem, color-mix(in srgb, var(--deity-secondary) 18%, #071a21) 100%);
 }
+.print-only { display: none; }
 
 .app-nav {
   position: sticky;
@@ -55,8 +58,8 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   gap: 28px;
   color: #f8f4e9;
-  background: rgba(5, 22, 28, .96);
-  border-bottom: 1px solid color-mix(in srgb, var(--bronze) 64%, #27434a);
+  background: color-mix(in srgb, var(--deity-deep) 36%, rgba(5, 22, 28, .97));
+  border-bottom: 1px solid color-mix(in srgb, var(--deity) 58%, #8f764a);
   backdrop-filter: blur(14px);
 }
 .app-nav::after {
@@ -85,7 +88,7 @@ input:focus, select:focus, textarea:focus {
   display: grid;
   place-items: center;
   color: #fff;
-  background: color-mix(in srgb, var(--deity) 24%, transparent);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--deity) 44%, transparent), color-mix(in srgb, var(--deity-deep) 82%, #06191f));
   border: 1px solid color-mix(in srgb, var(--deity) 72%, #fff);
 }
 .wordmark b { font-size: 11px; }
@@ -128,6 +131,19 @@ input:focus, select:focus, textarea:focus {
   z-index: 3;
   background: linear-gradient(90deg, var(--bronze), var(--deity) 36%, transparent 72%);
 }
+.hero-shell::after {
+  content: attr(data-deity-mark);
+  position: absolute;
+  top: 14px;
+  right: 24px;
+  z-index: 0;
+  color: color-mix(in srgb, var(--deity) 13%, transparent);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(72px, 10vw, 150px);
+  font-weight: 700;
+  line-height: .8;
+  pointer-events: none;
+}
 .hero-identity {
   position: relative;
   display: grid;
@@ -135,7 +151,9 @@ input:focus, select:focus, textarea:focus {
   min-height: 166px;
   border-bottom: 1px solid var(--line);
   background-color: var(--paper);
-  background-image: radial-gradient(ellipse at 50% 118%, transparent 64%, rgba(14, 97, 114, .045) 65% 68%, transparent 69%);
+  background-image:
+    linear-gradient(120deg, color-mix(in srgb, var(--deity-light) 8%, transparent), transparent 44%),
+    radial-gradient(ellipse at 50% 118%, transparent 64%, color-mix(in srgb, var(--deity-secondary) 7%, transparent) 65% 68%, transparent 69%);
   background-size: 54px 22px;
 }
 .portrait-frame {
@@ -153,7 +171,7 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 5px rgba(185, 134, 63, .13), 0 10px 26px rgba(6, 25, 31, .28);
   background:
     radial-gradient(circle at 36% 26%, color-mix(in srgb, var(--deity) 64%, transparent), transparent 48%),
-    linear-gradient(145deg, #173944, #06191f 76%);
+    linear-gradient(145deg, color-mix(in srgb, var(--deity-secondary) 52%, #173944), color-mix(in srgb, var(--deity-deep) 86%, #06191f) 76%);
 }
 .portrait-frame::before, .portrait-frame::after {
   content: "";
@@ -212,6 +230,7 @@ input:focus, select:focus, textarea:focus {
 }
 .avatar-remove:hover { background: #883a2a; transform: scale(1.06); }
 .identity-fields { padding: 18px 28px 16px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.hero-identity > * { position: relative; z-index: 1; }
 .identity-fields label { display: grid; gap: 5px; min-width: 0; }
 .identity-fields label > span, .maximum-field, .temp-value {
   color: var(--muted);
@@ -301,6 +320,9 @@ input:focus, select:focus, textarea:focus {
   height: 33px;
   margin: 0;
   appearance: none;
+  outline: none;
+  border: 0;
+  box-shadow: none !important;
   background: transparent;
   cursor: ew-resize;
 }
@@ -324,7 +346,16 @@ input:focus, select:focus, textarea:focus {
   border-radius: 2px;
   box-shadow: 0 2px 7px rgba(20, 16, 10, .32);
 }
-.meter input[type="range"]:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--bronze) 35%, transparent); }
+.meter input[type="range"]:focus,
+.meter input[type="range"]:focus-visible {
+  outline: none;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.meter:has(input[type="range"]:focus-visible) {
+  outline: 2px solid color-mix(in srgb, var(--deity) 62%, #fff);
+  outline-offset: 4px;
+}
 .temp-meter { margin-top: 7px; display: grid; grid-template-columns: 78px 1fr 32px; align-items: center; gap: 7px; color: #8a6510; }
 .temp-meter .temp-label { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
 .temp-meter > div { height: 5px; background: #ddcfb5; }
@@ -335,8 +366,9 @@ input:focus, select:focus, textarea:focus {
   padding: 18px 22px;
   color: var(--ink);
   background:
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--deity-light) 24%, transparent), transparent 58%),
-    linear-gradient(145deg, #fffaf0, #f4ead8);
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--deity) 25%, transparent), transparent 58%),
+    linear-gradient(145deg, color-mix(in srgb, var(--deity-light) 12%, #fffaf0), color-mix(in srgb, var(--deity-secondary) 7%, #f4ead8));
+  box-shadow: inset 0 4px 0 color-mix(in srgb, var(--deity) 74%, var(--bronze));
 }
 .divine-block .number-control { grid-template-columns: 1fr 30px 40px auto 30px; }
 .divine-block .number-control > span { font-size: 11px; }
@@ -356,7 +388,7 @@ input:focus, select:focus, textarea:focus {
   display: grid;
   grid-template-columns: repeat(4, 1fr) 1.3fr;
   color: #f8f4e9;
-  background: #0a252d;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--deity-deep) 74%, #0a252d), color-mix(in srgb, var(--deity-secondary) 30%, #0a252d));
 }
 .combat-facts > div, .combat-facts > label {
   min-height: 80px;
@@ -489,6 +521,20 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid var(--line);
   border-radius: 6px;
 }
+.ability-category.category-filiation {
+  border-color: color-mix(in srgb, var(--deity) 58%, var(--line));
+  box-shadow: inset 4px 0 0 var(--deity);
+}
+.ability-category.category-path {
+  border-color: color-mix(in srgb, var(--deity-secondary) 44%, var(--line));
+  box-shadow: inset 4px 0 0 color-mix(in srgb, var(--deity-secondary) 68%, var(--bronze));
+}
+.category-filiation .category-heading {
+  background: linear-gradient(100deg, color-mix(in srgb, var(--deity-light) 16%, transparent), transparent 72%);
+}
+.category-path .category-heading {
+  background: linear-gradient(100deg, color-mix(in srgb, var(--deity-secondary) 10%, transparent), transparent 72%);
+}
 .ability-category:first-child { grid-column: 1 / -1; }
 .category-heading {
   min-height: 88px;
@@ -516,6 +562,7 @@ input:focus, select:focus, textarea:focus {
 .ability-list { border-top: 1px solid var(--line); }
 .ability-card { border-bottom: 1px solid #d8cebd; }
 .ability-card:last-child { border-bottom: 0; }
+.ability-unit:last-child .ability-card { border-bottom: 0; }
 .ability-card summary, .equipment-item summary {
   min-height: 70px;
   padding-inline: 12px;
@@ -664,11 +711,17 @@ footer a:hover { color: var(--deity-light); }
 }
 
 @media (max-width: 580px) {
-  .app-nav { min-height: 58px; padding: 7px 10px; }
+  .app-nav {
+    min-height: 58px;
+    padding: 7px 10px;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 6px;
+    overflow: hidden;
+  }
   .wordmark { grid-template-columns: 30px; }
   .wordmark b, .document-actions > span { display: none; }
-  .document-actions { gap: 4px; }
-  .document-actions button { padding: 7px 6px; font-size: 7px; }
+  .document-actions { width: 100%; min-width: 0; justify-content: flex-end; gap: 3px; }
+  .document-actions button { min-width: 0; flex: 0 1 auto; padding: 7px 5px; font-size: 7px; }
   .site-content { width: 100%; }
   .hero-shell, .stats-layout, .abilities-section, .equipment-section, .story-section { border-left: 0; border-right: 0; border-radius: 0; }
   .hero-identity { display: block; }
@@ -684,6 +737,7 @@ footer a:hover { color: var(--deity-light); }
   .portrait-frame > span { font-size: 29px; }
   .portrait-frame .avatar-upload { inset: auto 4px 4px; padding: 3px; font-size: 6px; }
   .portrait-frame .avatar-remove { top: 3px; right: 3px; width: 18px; height: 18px; font-size: 13px; }
+  .hero-shell::after { top: 18px; right: 8px; font-size: 64px; }
   .identity-fields { padding: 16px 12px 18px; }
   .name-field { min-height: 56px; padding-left: 68px; }
   .name-field input { font-size: 26px; }
@@ -697,6 +751,9 @@ footer a:hover { color: var(--deity-light); }
   .number-control { grid-template-columns: 1fr 28px 40px auto 28px; }
   .combat-facts { grid-template-columns: 1fr 1fr; }
   .combat-facts > div, .combat-facts > label { min-height: 72px; padding: 13px 15px; }
+  .pips-line { gap: 7px; }
+  .pips-line > div { gap: 4px; }
+  .pips-line button { width: 18px; height: 18px; }
   .saving-throws > div:last-child { grid-template-columns: repeat(2, 1fr); }
   .saving-throws button { border-bottom: 1px solid var(--line); }
   .editorial-heading.with-key { align-items: start; flex-direction: column; }
@@ -730,21 +787,224 @@ footer a:hover { color: var(--deity-light); }
 }
 
 @media print {
-  @page { size: A4; margin: 11mm; }
-  body, .app-shell { background: white !important; }
-  .app-nav, footer, .large-add, .category-heading button, .equipment-filters, .number-control button, .remove-action, .avatar-upload, .avatar-remove, .meter input[type="range"] { display: none !important; }
+  @page { size: A4 portrait; margin: 9mm 10mm 11mm; }
+
+  html, body {
+    width: 100%;
+    background: #fff !important;
+    color: #211f1a;
+    font-size: 9pt;
+  }
+
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .app-shell {
+    min-height: 0;
+    overflow: visible;
+    background: #fff !important;
+  }
+
+  .app-nav,
+  footer,
+  .large-add,
+  .category-heading button,
+  .equipment-filters,
+  .number-control button,
+  .remove-action,
+  .avatar-upload,
+  .avatar-remove,
+  .meter input[type="range"],
+  .ability-editor,
+  .equipment-editor,
+  .equipment-workspace > .equipment-list,
+  .personality-grid textarea,
+  .disclosure {
+    display: none !important;
+  }
+
+  .print-only { display: block !important; }
   .site-content { width: 100%; margin: 0; padding: 0; }
-  .hero-shell, .stats-layout, .abilities-section, .equipment-section, .story-section { box-shadow: none; border-color: #777; margin-top: 7mm; }
-  .hero-shell { margin-top: 0; }
-  .hero-identity { min-height: 38mm; }
-  .portrait-frame, .divine-block, .combat-facts, .meter span, .temp-meter i { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .abilities-section, .equipment-section, .story-section { display: block; padding: 7mm; }
-  .ability-categories { display: block; }
-  .ability-category { margin-bottom: 4mm; }
-  .section-toolbar { margin-bottom: 5mm; }
-  .ability-card, .equipment-item, .personality-grid label, .attribute-line, .skill-entry { break-inside: avoid; }
-  .ability-card:not([open]) > .ability-editor, .equipment-item:not([open]) > .equipment-editor { display: grid; }
-  .ability-editor, .equipment-editor { padding: 4mm; }
-  .disclosure { display: none; }
-  input, select, textarea { box-shadow: none !important; }
+
+  .hero-shell,
+  .stats-layout,
+  .abilities-section,
+  .equipment-section,
+  .story-section {
+    margin: 0;
+    border: 1px solid #9c8b6b;
+    border-radius: 2mm;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .hero-shell { break-after: page; }
+  .hero-shell::after { right: 5mm; font-size: 28mm; opacity: .72; }
+  .hero-identity {
+    min-height: 31mm;
+    grid-template-columns: 25mm minmax(0, 1fr);
+    break-inside: avoid;
+  }
+  .portrait-frame {
+    width: 19mm;
+    height: 19mm;
+    box-shadow: 0 0 0 1.5mm rgba(185, 134, 63, .12);
+  }
+  .portrait-frame > span { font-size: 12mm; }
+  .identity-fields { padding: 4mm 5mm 3.5mm; }
+  .name-field input { font-size: 24pt; line-height: 1; }
+  .identity-row { margin-top: 2mm; gap: 5mm; grid-template-columns: minmax(32mm, .7fr) 1.5fr 18mm; }
+  .identity-secondary { margin-top: 1.5mm; gap: 5mm; }
+  .identity-fields label > span { font-size: 6.5pt; }
+  .identity-fields input, .identity-fields select { padding: 1mm 0; font-size: 8.5pt; }
+
+  .combat-dashboard { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .vitals-block { grid-column: span 8; padding: 3.5mm 4mm; }
+  .divine-block { grid-column: span 4; padding: 3.5mm 4mm; }
+  .vital-row {
+    min-height: 16mm;
+    grid-template-columns: minmax(37mm, 42mm) 14mm minmax(30mm, 1fr) 18mm;
+    gap: 3mm;
+  }
+  .number-control { grid-template-columns: 1fr 10mm auto; gap: 1mm; }
+  .number-control > span { font-size: 7.5pt; }
+  .number-control strong { font-size: 17pt; }
+  .number-control small { font-size: 7pt; }
+  .maximum-field, .temp-value { font-size: 6pt; }
+  .maximum-field input, .temp-value input { font-size: 10pt; }
+  .meter { height: 3mm; }
+  .temp-meter { margin-top: 1.5mm; grid-template-columns: 19mm 1fr 8mm; }
+  .temp-meter .temp-label { font-size: 5.5pt; }
+  .divine-block .number-control { grid-template-columns: 1fr 9mm auto; }
+  .divine-block .meter { margin: 2.5mm 0 2mm; }
+  .pips-line { min-height: 9mm; gap: 2mm; }
+  .pips-line > span { font-size: 6.5pt; }
+  .pips-line button { display: block !important; width: 4mm; height: 4mm; }
+
+  .combat-facts { grid-template-columns: repeat(5, 1fr); }
+  .combat-facts > div, .combat-facts > label { min-height: 16mm; padding: 2.5mm 4mm; }
+  .combat-facts strong { font-size: 16pt; }
+  .combat-facts span, .combat-facts small { font-size: 5.8pt; }
+  .saving-throws { padding: 3.5mm 5mm 4mm; }
+  .compact-heading { margin-bottom: 2mm; }
+  .compact-heading h2 { font-size: 14pt; }
+  .saving-throws > div:last-child { grid-template-columns: repeat(6, 1fr); }
+  .saving-throws button {
+    display: flex !important;
+    min-height: 12mm;
+    padding: 2mm 3mm;
+  }
+  .saving-throws button span { font-size: 6.5pt; }
+  .saving-throws button strong { font-size: 12pt; }
+
+  .stats-layout {
+    margin: 0;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+  .attributes-column { grid-column: span 4; padding: 5mm; }
+  .skills-column { grid-column: span 8; padding: 5mm; }
+  .editorial-heading h2 { font-size: 22pt; }
+  .attribute-line { min-height: 12mm; grid-template-columns: 1fr 14mm 14mm; }
+  .attribute-line:first-of-type, .skills-grid { margin-top: 3mm; }
+  .attribute-line input { width: 12mm; font-size: 11pt; }
+  .attribute-line strong { font-size: 18pt; }
+  .skills-grid { grid-template-columns: 1fr 1fr; gap: 0 5mm; }
+  .skill-entry {
+    min-height: 8.5mm;
+    padding: 0 1mm;
+  }
+  .skill-entry > span { font-size: 7.5pt; }
+  .skill-entry strong { font-size: 11pt; }
+
+  .abilities-section,
+  .equipment-section,
+  .story-section {
+    padding: 6mm;
+    break-before: page;
+  }
+  .abilities-section {
+    margin-top: 5mm;
+    break-before: auto;
+  }
+  .section-toolbar {
+    min-height: 10mm;
+    margin-bottom: 3mm;
+    padding-bottom: 2mm;
+  }
+  .section-toolbar h2 { font-size: 22pt; }
+  .ability-categories { display: block; padding-top: 0; }
+  .ability-category {
+    margin-bottom: 4mm;
+    border-radius: 1mm;
+    overflow: visible;
+    break-inside: auto;
+  }
+  .category-heading {
+    min-height: 13mm;
+    padding: 2mm 3mm;
+    grid-template-columns: 1fr 8mm;
+    gap: 2mm;
+  }
+  .category-heading h3 { margin: 0; font-size: 15pt; }
+  .category-heading p { display: none; }
+  .category-heading > span { width: 7mm; height: 7mm; font-size: 7pt; }
+  .ability-unit, .print-equipment-list article { break-inside: avoid; }
+  .ability-card summary {
+    min-height: 11mm;
+    padding: 1.5mm 3mm;
+    grid-template-columns: 9mm 1fr auto;
+    gap: 2.5mm;
+  }
+  .ability-rank { width: 8mm; height: 8mm; font-size: 7pt; }
+  .ability-card summary strong { font-size: 11.5pt; }
+  .ability-card summary small, .ability-cost { font-size: 6.5pt; }
+  .ability-print { padding: 0 3mm 3mm 14.5mm; }
+  .ability-print { border-bottom: 1px solid #d8cebd; }
+  .print-meta { display: flex; flex-wrap: wrap; gap: 1mm 3mm; color: #6e6558; font-size: 6.5pt; }
+  .ability-print p { margin: 1.5mm 0 0; line-height: 1.38; white-space: pre-wrap; }
+
+  .print-equipment-list { border: 1px solid var(--line); border-radius: 1mm; overflow: hidden; }
+  .print-equipment-list article { padding: 3mm 4mm; border-bottom: 1px solid var(--line); }
+  .print-equipment-list article:last-child { border-bottom: 0; }
+  .print-equipment-list header { display: flex; justify-content: space-between; gap: 5mm; }
+  .print-equipment-list header strong { font-family: "Cormorant Garamond", Georgia, serif; font-size: 12pt; }
+  .print-equipment-list header span { color: #655e53; font-size: 7pt; }
+  .print-equipment-list dl {
+    margin: 1.5mm 0 0;
+    display: grid;
+    grid-template-columns: max-content 1fr max-content 1fr;
+    gap: .8mm 2mm;
+    font-size: 7.5pt;
+  }
+  .print-equipment-list dt { color: #6d6558; font-weight: 800; }
+  .print-equipment-list dd { margin: 0; }
+
+  .personality-grid { margin-top: 3mm; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3mm; }
+  .personality-grid label {
+    padding: 3mm;
+    border: 1px solid var(--line);
+    border-radius: 1mm;
+    break-inside: avoid;
+  }
+  .personality-grid .wide, .personality-grid .tall { grid-column: 1 / -1; }
+  .personality-grid .tall { break-inside: auto; }
+  .print-value {
+    margin-top: 1.5mm;
+    color: var(--ink);
+    font-size: 8.5pt;
+    font-weight: 450;
+    line-height: 1.48;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: pre-wrap;
+  }
+
+  input, select, textarea {
+    box-shadow: none !important;
+    background: transparent !important;
+  }
 }
