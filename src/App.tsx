@@ -22,6 +22,7 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 const ABILITY_ORDER = Object.keys(ABILITY_META) as AbilityCategory[];
 const EQUIPMENT_TYPES = ["Arma", "Armadura", "Escudo", "Ferramenta", "Acessório", "Relíquia", "Consumível", "Outro"];
 const ORIGIN_SUGGESTIONS = ["Semideus Grego", "Sátiro", "Ciclope", "Mortal Vidente", "Legado"];
+type PrintFormat = "A4" | "A3";
 const LEGEND_CHOICES = [
   {
     value: "O Voto",
@@ -55,6 +56,12 @@ function signed(value: number) {
 
 function proficiency(level: number) {
   return 2 + Math.floor((Math.max(1, level) - 1) / 4);
+}
+
+function initialPrintFormat(): PrintFormat {
+  const queryFormat = new URLSearchParams(window.location.search).get("paper");
+  if (queryFormat === "A3" || queryFormat === "A4") return queryFormat;
+  return localStorage.getItem("semideuses-print-format") === "A3" ? "A3" : "A4";
 }
 
 function NumberControl({
@@ -326,6 +333,7 @@ export default function Home() {
   const [saved, setSaved] = useState(false);
   const [equipmentFilter, setEquipmentFilter] = useState("Todos");
   const [legendOpen, setLegendOpen] = useState(false);
+  const [printFormat, setPrintFormat] = useState<PrintFormat>(initialPrintFormat);
   const importRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLElement>(null);
@@ -379,6 +387,23 @@ export default function Home() {
     const timer = window.setTimeout(() => setSaved(false), 1000);
     return () => window.clearTimeout(timer);
   }, [hydrated, sheet]);
+
+  useEffect(() => {
+    document.documentElement.dataset.printSize = printFormat;
+    localStorage.setItem("semideuses-print-format", printFormat);
+
+    const pageStyleId = "semideuses-print-page-style";
+    let pageStyle = document.getElementById(pageStyleId) as HTMLStyleElement | null;
+    if (!pageStyle) {
+      pageStyle = document.createElement("style");
+      pageStyle.id = pageStyleId;
+      document.head.appendChild(pageStyle);
+    }
+    const margins = printFormat === "A3" ? "12mm 14mm 15mm" : "9mm 10mm 11mm";
+    pageStyle.textContent = `@media print { @page { size: ${printFormat} portrait; margin: ${margins}; } }`;
+
+    return () => pageStyle?.remove();
+  }, [printFormat]);
 
   useEffect(() => {
     if (!legendOpen) return;
@@ -518,6 +543,13 @@ export default function Home() {
           <button type="button" onClick={newSheet}>Nova</button>
           <button type="button" onClick={() => importRef.current?.click()}>Importar</button>
           <button type="button" onClick={exportJson}>JSON</button>
+          <label className="pdf-format-control">
+            <span>Formato</span>
+            <select aria-label="Formato do PDF" value={printFormat} onChange={(event) => setPrintFormat(event.target.value as PrintFormat)}>
+              <option value="A4">A4</option>
+              <option value="A3">A3</option>
+            </select>
+          </label>
           <button type="button" className="primary-action" onClick={printSheet}>PDF</button>
           <input ref={importRef} type="file" accept=".json,application/json" hidden onChange={importJson} />
         </div>

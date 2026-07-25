@@ -133,6 +133,39 @@ input:focus, select:focus, textarea:focus {
 }
 .document-actions button:hover { color: white; background: #153b45; border-color: #65818a; transform: translateY(-1px); }
 .document-actions .primary-action { color: #17120b; background: #d3aa64; border-color: #e2bd7a; }
+.pdf-format-control {
+  height: 34px;
+  padding: 4px 6px 4px 8px;
+  display: grid;
+  grid-template-columns: auto 34px;
+  align-items: center;
+  gap: 5px;
+  color: #9ea8a1;
+  background: #091f26;
+  border: 1px solid #2b4c53;
+  border-radius: 3px;
+}
+.pdf-format-control > span {
+  font-size: 6.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.pdf-format-control select {
+  width: 34px;
+  padding: 2px 0;
+  color: #f3ead9;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #49636a;
+  border-radius: 0;
+  font-size: 9px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.pdf-format-control select:hover,
+.pdf-format-control select:focus { color: #fff; border-bottom-color: var(--deity-light); outline: 0; }
+.pdf-format-control option { color: var(--ink); background: var(--paper-bright); }
 
 .site-content { width: min(1480px, calc(100% - 44px)); margin: 0 auto; padding: 26px 0 52px; }
 .hero-shell, .stats-layout, .abilities-section, .equipment-section, .story-section {
@@ -1172,6 +1205,9 @@ footer a:hover { color: var(--deity-light); }
   .wordmark b, .document-actions > span { display: none; }
   .document-actions { width: 100%; min-width: 0; justify-content: flex-end; gap: 3px; }
   .document-actions button { min-width: 0; flex: 0 1 auto; padding: 7px 5px; font-size: 7px; }
+  .pdf-format-control { height: 29px; padding: 3px 4px; grid-template-columns: 30px; }
+  .pdf-format-control > span { display: none; }
+  .pdf-format-control select { width: 30px; font-size: 7px; }
   .site-content { width: 100%; }
   .hero-shell, .stats-layout, .abilities-section, .equipment-section, .story-section { border-left: 0; border-right: 0; border-radius: 0; }
   .hero-identity { display: block; }

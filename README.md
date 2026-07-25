@@ -10,7 +10,7 @@ qualquer dispositivo sem depender de conta ou servidor.
 
 A ficha começa vazia, salva os dados somente no navegador e permite
 exportar/importar JSON. A versão em PDF é organizada automaticamente em quantas
-páginas o conteúdo precisar.
+páginas o conteúdo precisar, com escolha entre os formatos A4 e A3.
 
 ## O que você encontra
 

@@ -25,6 +25,10 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /semideuses-sheet-v3/);
   assert.match(app, /exportJson/);
   assert.match(app, /window\.print/);
+  assert.match(app, /Formato do PDF/);
+  assert.match(app, /semideuses-print-format/);
+  assert.match(app, /size: \$\{printFormat\} portrait/);
+  assert.match(app, /printFormat === "A3" \? "12mm 14mm 15mm"/);
   assert.match(app, /Favor divino/);
   assert.match(app, /Testes de resistência/);
   assert.match(app, /Adicionar equipamento/);
@@ -45,6 +49,7 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /type="range"/);
   assert.match(app, /prepareAvatar/);
   assert.match(css, /@media print/);
+  assert.match(css, /@page \{ size: A4 portrait;/);
   assert.match(css, /\.stats-layout \{[\s\S]*break-inside: avoid;[\s\S]*break-after: page;/);
   assert.match(css, /\.hero-shell \{ break-after: avoid-page; \}/);
   assert.match(css, /@media \(max-width: 580px\)/);
