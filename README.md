@@ -17,7 +17,7 @@ páginas o conteúdo precisar.
 - Temas próprios para cada filiação.
 - Avatar, PV, PV temporário, mana, recurso divino, Favor Divino e sustentação.
 - Testes de resistência, atributos, perícias e cálculo transparente de CA.
-- Raça e origem separadas, sem limitar personagens especiais ou expansões.
+- Origem única com sugestões abertas, sem limitar personagens especiais ou expansões.
 - Skills, habilidades, talentos e Caminho Divino sem limite de entradas.
 - Decisão final do Caminho da Lenda liberada no nível 20, com os quatro destinos do livro.
 - Equipamentos, itens equipados e controle de Dracmas.

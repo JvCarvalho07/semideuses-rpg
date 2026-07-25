@@ -285,12 +285,12 @@ input:focus, select:focus, textarea:focus {
 }
 .identity-filiation { grid-column: span 3; }
 .identity-path { grid-column: span 4; }
-.identity-race { grid-column: span 3; }
+.identity-origin { grid-column: span 3; }
 .identity-level { grid-column: span 2; }
 .identity-row.has-legend { grid-template-columns: repeat(14, minmax(0, 1fr)); }
 .identity-row.has-legend .identity-filiation { grid-column: span 3; }
 .identity-row.has-legend .identity-path { grid-column: span 3; }
-.identity-row.has-legend .identity-race { grid-column: span 3; }
+.identity-row.has-legend .identity-origin { grid-column: span 3; }
 .identity-row.has-legend .identity-level { grid-column: span 1; }
 .identity-row input, .identity-row select { font-weight: 730; }
 .legend-trigger {
@@ -324,7 +324,7 @@ input:focus, select:focus, textarea:focus {
 .legend-trigger.is-chosen strong { color: color-mix(in srgb, var(--deity) 72%, #2c251b); }
 .identity-secondary {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 24px;
   margin-top: 8px;
 }
@@ -465,6 +465,46 @@ input:focus, select:focus, textarea:focus {
 .combat-facts label span { grid-column: 1 / -1; }
 .combat-facts label select { color: #f8f1e4; background: transparent; border: 0; border-bottom: 1px solid #555a50; font-weight: 750; }
 .combat-facts label option { color: var(--ink); }
+.initiative-fact > div {
+  display: grid;
+  grid-template-columns: auto 42px;
+  align-items: end;
+  gap: 10px;
+}
+.initiative-fact > div > label {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 1px;
+}
+.initiative-fact > div > label small {
+  color: #84877f;
+  font-size: 7px;
+  font-weight: 750;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.initiative-fact input {
+  width: 42px;
+  padding: 0 2px 1px;
+  color: #f8f1e4;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #555a50;
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 750;
+  text-align: center;
+  appearance: textfield;
+}
+.initiative-fact input::-webkit-inner-spin-button,
+.initiative-fact input::-webkit-outer-spin-button { margin: 0; appearance: none; }
+.initiative-fact input:focus {
+  border-bottom-color: var(--deity-light);
+  outline: 0;
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--deity) 55%, transparent);
+}
 .combat-facts .casting-panel {
   min-width: 0;
   padding: 10px 14px;
@@ -1094,15 +1134,15 @@ footer a:hover { color: var(--deity-light); }
   .identity-row { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
   .identity-row.has-legend { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .identity-filiation { grid-column: 1 / 4; grid-row: 1; }
-  .identity-race { grid-column: 4 / 7; grid-row: 1; }
+  .identity-origin { grid-column: 4 / 7; grid-row: 1; }
   .identity-path { grid-column: 1 / 5; grid-row: 2; }
   .identity-level { grid-column: 5 / 7; grid-row: 2; }
   .identity-row.has-legend .identity-filiation { grid-column: 1 / 4; }
-  .identity-row.has-legend .identity-race { grid-column: 4 / 7; }
+  .identity-row.has-legend .identity-origin { grid-column: 4 / 7; }
   .identity-row.has-legend .identity-path { grid-column: 1 / 5; }
   .identity-row.has-legend .identity-level { grid-column: 5 / 7; }
   .legend-trigger { grid-column: 1 / -1; grid-row: 3; }
-  .identity-secondary { grid-template-columns: 1fr; gap: 10px; }
+  .identity-secondary { grid-template-columns: 1fr 1fr; gap: 10px; }
   .combat-dashboard { grid-template-columns: 1fr; }
   .vitals-block, .divine-block { grid-column: 1 / -1; }
   .vitals-block { border-right: 0; border-bottom: 1px solid var(--line); }
@@ -1156,12 +1196,11 @@ footer a:hover { color: var(--deity-light); }
   .identity-row { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .identity-row.has-legend { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .identity-filiation { grid-column: 1 / 4; grid-row: 1; }
-  .identity-race { grid-column: 4 / 7; grid-row: 1; }
+  .identity-origin { grid-column: 4 / 7; grid-row: 1; }
   .identity-path { grid-column: 1 / 5; grid-row: 2; }
   .identity-level { grid-column: 5 / 7; grid-row: 2; }
   .legend-trigger { grid-column: 1 / -1; grid-row: 3; }
   .identity-secondary { grid-template-columns: 1fr 1fr; }
-  .identity-secondary label:last-child { grid-column: 1 / -1; }
   .vitals-block, .divine-block, .saving-throws, .attributes-column, .skills-column { padding: 18px 15px; }
   .vital-row { grid-template-columns: 1fr 62px 72px; gap: 10px; padding: 12px 0; }
   .vital-row .bar-group { grid-column: 1 / -1; grid-row: 2; }
@@ -1304,12 +1343,12 @@ footer a:hover { color: var(--deity-light); }
   .identity-row > * { grid-row: auto; }
   .identity-filiation { grid-column: span 3; }
   .identity-path { grid-column: span 4; }
-  .identity-race { grid-column: span 3; }
+  .identity-origin { grid-column: span 3; }
   .identity-level { grid-column: span 2; }
   .identity-row.has-legend { grid-template-columns: repeat(14, minmax(0, 1fr)); }
   .identity-row.has-legend .identity-filiation { grid-column: span 3; }
   .identity-row.has-legend .identity-path { grid-column: span 3; }
-  .identity-row.has-legend .identity-race { grid-column: span 3; }
+  .identity-row.has-legend .identity-origin { grid-column: span 3; }
   .identity-row.has-legend .identity-level { grid-column: span 1; }
   .legend-trigger {
     grid-column: span 4;
@@ -1320,7 +1359,7 @@ footer a:hover { color: var(--deity-light); }
   .legend-trigger > span { font-size: 6.5pt; }
   .legend-trigger strong { font-size: 8pt; }
   .legend-trigger:not(.is-chosen) strong { visibility: hidden; }
-  .identity-secondary { margin-top: 1.5mm; gap: 5mm; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .identity-secondary { margin-top: 1.5mm; gap: 5mm; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .identity-fields label > span { font-size: 6.5pt; }
   .identity-fields input, .identity-fields select { padding: 1mm 0; font-size: 8.5pt; }
   .identity-fields input::placeholder { color: transparent; }
@@ -1352,6 +1391,9 @@ footer a:hover { color: var(--deity-light); }
   .combat-facts > div, .combat-facts > label { min-height: 16mm; padding: 2.5mm 4mm; }
   .combat-facts strong { font-size: 16pt; }
   .combat-facts span, .combat-facts small { font-size: 5.8pt; }
+  .initiative-fact > div { grid-template-columns: auto 10mm; gap: 2mm; }
+  .initiative-fact > div > label small { font-size: 4.8pt; }
+  .initiative-fact input { width: 10mm; font-size: 8pt; }
   .combat-facts .casting-panel {
     min-height: 16mm;
     padding: 1.5mm 2mm;

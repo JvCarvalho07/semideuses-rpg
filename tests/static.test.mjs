@@ -14,7 +14,7 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(html, /Semideuses RPG — Ficha Digital/);
   assert.doesNotMatch(html, /Héctor Vance|João Victor/);
   assert.match(model, /name: "",/);
-  assert.match(model, /race: "",/);
+  assert.match(model, /origin: "",/);
   assert.match(model, /legendDestiny: "",/);
   assert.match(model, /castingDcOverride: null,/);
   assert.match(model, /avatarDataUrl: "",/);
@@ -30,7 +30,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /Adicionar equipamento/);
   assert.match(app, /normalizeSheet/);
   assert.match(app, /Caminho divino/);
-  assert.match(app, /Raça/);
+  assert.match(app, /origin-options/);
+  assert.match(app, /legacyRace/);
+  assert.doesNotMatch(app, /<span>Raça<\/span>/);
   assert.match(app, /Mortal Vidente/);
   assert.match(app, /O que restará quando a aventura terminar/);
   assert.match(app, /Ascensão Menor/);
@@ -38,6 +40,7 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /castingAttackBonus = castingModifier \+ prof/);
   assert.match(app, /automaticCastingDc = 8 \+ castingModifier \+ prof/);
   assert.match(app, /CD das habilidades/);
+  assert.match(app, /Bônus extra de iniciativa/);
   assert.match(app, /Apoiar o projeto no GitHub com uma estrela/);
   assert.match(app, /type="range"/);
   assert.match(app, /prepareAvatar/);

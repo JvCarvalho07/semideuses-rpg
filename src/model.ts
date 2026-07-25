@@ -31,7 +31,6 @@ export type CharacterSheet = {
   version: number;
   avatarDataUrl: string;
   name: string;
-  race: string;
   legendDestiny: string;
   legacyLegendEntries?: Ability[];
   filiation: string;
@@ -150,7 +149,6 @@ export const INITIAL_SHEET: CharacterSheet = {
   version: 2,
   avatarDataUrl: "",
   name: "",
-  race: "",
   legendDestiny: "",
   filiation: "",
   pathName: "",

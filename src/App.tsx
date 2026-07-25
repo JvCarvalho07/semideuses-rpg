@@ -21,7 +21,7 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const ABILITY_ORDER = Object.keys(ABILITY_META) as AbilityCategory[];
 const EQUIPMENT_TYPES = ["Arma", "Armadura", "Escudo", "Ferramenta", "Acessório", "Relíquia", "Consumível", "Outro"];
-const RACE_SUGGESTIONS = ["Semideus Grego", "Sátiro", "Ciclope", "Mortal Vidente", "Legado"];
+const ORIGIN_SUGGESTIONS = ["Semideus Grego", "Sátiro", "Ciclope", "Mortal Vidente", "Legado"];
 const LEGEND_CHOICES = [
   {
     value: "O Voto",
@@ -294,15 +294,16 @@ function EquipmentEditor({
 }
 
 function normalizeSheet(candidate: CharacterSheet): CharacterSheet {
+  const { race: legacyRace, ...sheetWithoutLegacyRace } = candidate as CharacterSheet & { race?: string };
   const rawGroups = candidate.abilityGroups as Partial<Record<AbilityCategory | "legend", Ability[]>>;
   const legacyLegendEntries = candidate.legacyLegendEntries?.length
     ? candidate.legacyLegendEntries
     : rawGroups.legend;
   return {
-    ...candidate,
+    ...sheetWithoutLegacyRace,
     version: 2,
     avatarDataUrl: candidate.avatarDataUrl || "",
-    race: candidate.race || "",
+    origin: candidate.origin || legacyRace || "",
     legendDestiny: candidate.legendDestiny || "",
     legacyLegendEntries: legacyLegendEntries?.length ? legacyLegendEntries : undefined,
     castingDcOverride: Number.isFinite(candidate.castingDcOverride)
@@ -551,7 +552,7 @@ export default function Home() {
                   setSheet((current) => ({ ...current, filiation: name, divineResource: selected ? Math.min(current.divineResource, selected.max) : 0 }));
                 }}>{[<option key="empty" value="">Escolha uma filiação</option>, ...Object.keys(FILIATIONS).map((name) => <option key={name} value={name}>{name}</option>)]}</select></label>
                 <label className="identity-path"><span>Caminho divino</span><input value={sheet.pathName} onChange={(event) => patch("pathName", event.target.value)} /></label>
-                <label className="identity-race"><span>Raça</span><input list="race-options" placeholder="Ex.: Semideus Grego" value={sheet.race} onChange={(event) => patch("race", event.target.value)} /></label>
+                <label className="identity-origin"><span>Origem</span><input list="origin-options" placeholder="Ex.: Semideus Grego" value={sheet.origin} onChange={(event) => patch("origin", event.target.value)} /></label>
                 <label className="identity-level"><span>Nível</span><input type="number" min={1} value={sheet.level} onChange={(event) => patch("level", Math.max(1, Number(event.target.value)))} /></label>
                 {sheet.level >= 20 && (
                   <button
@@ -564,9 +565,8 @@ export default function Home() {
                   </button>
                 )}
               </div>
-              <datalist id="race-options">{RACE_SUGGESTIONS.map((race) => <option key={race} value={race} />)}</datalist>
+              <datalist id="origin-options">{ORIGIN_SUGGESTIONS.map((origin) => <option key={origin} value={origin} />)}</datalist>
               <div className="identity-secondary">
-                <label><span>Origem</span><input value={sheet.origin} onChange={(event) => patch("origin", event.target.value)} /></label>
                 <label><span>Antecedente</span><input value={sheet.background} onChange={(event) => patch("background", event.target.value)} /></label>
                 <label><span>Jogador</span><input value={sheet.player} onChange={(event) => patch("player", event.target.value)} /></label>
               </div>
@@ -597,7 +597,23 @@ export default function Home() {
 
             <section className="combat-facts">
               <div><span>CA</span><strong>{armorClass}</strong><small>{armorBase} base + {equipmentBonus + sheet.caExtra}</small></div>
-              <div><span>Iniciativa</span><strong>{signed(mods.des + sheet.initiativeExtra)}</strong></div>
+              <div className="initiative-fact">
+                <span>Iniciativa</span>
+                <div>
+                  <strong>{signed(mods.des + sheet.initiativeExtra)}</strong>
+                  <label>
+                    <small>Extra</small>
+                    <input
+                      type="number"
+                      value={sheet.initiativeExtra}
+                      aria-label="Bônus extra de iniciativa"
+                      onFocus={(event) => event.currentTarget.select()}
+                      onChange={(event) => patch("initiativeExtra", Number(event.target.value))}
+                    />
+                  </label>
+                </div>
+                <small>DES {signed(mods.des)} · extra {signed(sheet.initiativeExtra)}</small>
+              </div>
               <div><span>Deslocamento</span><strong>{sheet.speed} m</strong></div>
               <div><span>Percepção</span><strong>{passivePerception}</strong><small>passiva</small></div>
               <div className="casting-panel">
