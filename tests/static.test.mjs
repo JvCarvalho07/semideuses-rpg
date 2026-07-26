@@ -3,12 +3,13 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("build estático contém a ficha limpa e as ações principais", async () => {
-  const [html, model, app, css, readme] = await Promise.all([
+  const [html, model, app, css, readme, signatures] = await Promise.all([
     readFile(new URL("../dist/index.html", import.meta.url), "utf8"),
     readFile(new URL("../src/model.ts", import.meta.url), "utf8"),
     readFile(new URL("../src/App.tsx", import.meta.url), "utf8"),
     readFile(new URL("../src/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../README.md", import.meta.url), "utf8"),
+    readFile(new URL("../src/filiationSignatures.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(html, /Semideuses RPG — Ficha Digital/);
@@ -21,6 +22,8 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(model, /abilityGroups: \{ abilities: \[\], filiation: \[\], path: \[\], skills: \[\], talents: \[\] \}/);
   assert.match(model, /equipment: \[\],/);
   assert.match(model, /dracmas: 0,/);
+  assert.match(model, /version: 3,/);
+  assert.match(model, /filiationSignatures: \{\},/);
   assert.doesNotMatch(model, /Héstia|Hestia/);
   assert.match(app, /semideuses-sheet-v3/);
   assert.match(app, /exportJson/);
@@ -35,6 +38,12 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /Testes de resistência/);
   assert.match(app, /Adicionar equipamento/);
   assert.match(app, /normalizeSheet/);
+  assert.match(app, /parsed\.version === 2 \|\| parsed\.version === 3/);
+  assert.match(app, /ensureFiliationSignatures/);
+  assert.match(app, /FiliationSignatureSection/);
+  assert.match(app, /path-signature-pair/);
+  assert.match(app, /skills-filiation-pair/);
+  assert.match(app, /Assinatura da filiação/);
   assert.match(app, /Caminho divino/);
   assert.match(app, /origin-options/);
   assert.match(app, /legacyRace/);
@@ -58,6 +67,17 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(css, /\.hero-shell \{ break-after: avoid-page; \}/);
   assert.match(css, /@media \(max-width: 580px\)/);
   assert.match(css, /prefers-reduced-motion/);
+  assert.match(css, /\.ability-pair \{[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 800px\)[\s\S]*\.ability-pair \{ grid-template-columns: 1fr; \}/);
+  assert.match(css, /\.signature-print/);
+  assert.equal((signatures.match(/id: "[^"]+",\n\s+title:/g) || []).length, 26);
+  assert.match(signatures, /zeus-tempestade-crescente/);
+  assert.match(signatures, /ares-furia/);
+  assert.match(signatures, /poseidon-mare/);
+  assert.match(signatures, /pdfPage: 65/);
+  assert.match(signatures, /Estação atual/);
+  assert.match(signatures, /Sintonia atual/);
+  assert.doesNotMatch(signatures, /Héstia|Hestia/);
   assert.match(readme, /Semideuses RPG é uma criação de João Jota/);
   assert.doesNotMatch(readme, /Rodar localmente|Publicar no GitHub Pages/);
 });

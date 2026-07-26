@@ -15,6 +15,7 @@ páginas o conteúdo precisar, com escolha entre os formatos A3, A4 e A5.
 ## O que você encontra
 
 - Temas próprios para cada filiação.
+- Assinaturas oficiais das 26 filiações, com regras, escolhas e notas persistentes.
 - Avatar, PV, PV temporário, mana, recurso divino, Favor Divino e sustentação.
 - Testes de resistência, atributos, perícias e cálculo transparente de CA.
 - Origem única com sugestões abertas, sem limitar personagens especiais ou expansões.

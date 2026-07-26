@@ -15,11 +15,15 @@ import {
   type AttributeKey,
   type CharacterSheet,
   type Equipment,
+  type FiliationSignatureState,
 } from "./model";
+import {
+  ensureFiliationSignatures,
+  signatureDefinition,
+} from "./filiationSignatures";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
-const ABILITY_ORDER = Object.keys(ABILITY_META) as AbilityCategory[];
 const EQUIPMENT_TYPES = ["Arma", "Armadura", "Escudo", "Ferramenta", "Acessório", "Relíquia", "Consumível", "Outro"];
 const ORIGIN_SUGGESTIONS = ["Semideus Grego", "Sátiro", "Ciclope", "Mortal Vidente", "Legado"];
 type PrintFormat = "A4" | "A3" | "A5";
@@ -267,6 +271,112 @@ function AbilitySection({
   );
 }
 
+function FiliationSignatureSection({
+  filiationName,
+  items,
+  onChange,
+}: {
+  filiationName: string;
+  items: FiliationSignatureState[];
+  onChange: (items: FiliationSignatureState[]) => void;
+}) {
+  const updateItem = (id: string, updated: FiliationSignatureState) => {
+    onChange(items.map((item) => item.id === id ? updated : item));
+  };
+  const addCustom = () => {
+    const id = makeId("signature");
+    onChange([
+      ...items,
+      {
+        id,
+        sourceId: id,
+        title: "",
+        rules: "",
+        selectedOptions: {},
+        notes: "",
+        custom: true,
+      },
+    ]);
+  };
+
+  return (
+    <section className="filiation-signature-section ability-category">
+      <div className="category-heading">
+        <div>
+          <h3>Assinatura da filiação</h3>
+        </div>
+        <span>{items.length}</span>
+        <button type="button" onClick={addCustom} disabled={!filiationName}>Personalizar</button>
+      </div>
+      <div className="signature-list">
+        {!filiationName && <p className="empty-state">Escolha uma filiação para revelar sua assinatura.</p>}
+        {filiationName && items.length === 0 && <p className="empty-state">Nenhuma assinatura registrada.</p>}
+        {items.map((item) => {
+          const definition = signatureDefinition(item);
+          const choices = definition?.choices || [];
+          return (
+            <article className={`signature-card ${item.custom ? "is-custom" : "is-official"}`} key={item.id}>
+              <div className="signature-screen">
+                <header>
+                  <span aria-hidden="true">{item.custom ? "+" : "Σ"}</span>
+                  <div>
+                    {item.custom
+                      ? <input aria-label="Nome da assinatura personalizada" placeholder="Nome da assinatura" value={item.title} onChange={(event) => updateItem(item.id, { ...item, title: event.target.value })} />
+                      : <h4>{item.title}</h4>}
+                    <small>{item.custom ? "Personalizada" : filiationName}</small>
+                  </div>
+                </header>
+                {item.custom
+                  ? <textarea aria-label="Regras da assinatura personalizada" placeholder="Regras, cargas, progressão e escolhas" value={item.rules} onChange={(event) => updateItem(item.id, { ...item, rules: event.target.value })} />
+                  : <p>{item.rules}</p>}
+                {choices.length > 0 && (
+                  <div className="signature-choices">
+                    {choices.map((choice) => (
+                      <label key={choice.id}>
+                        <span>{choice.label}</span>
+                        <select
+                          value={item.selectedOptions[choice.id] || choice.defaultValue}
+                          onChange={(event) => updateItem(item.id, {
+                            ...item,
+                            selectedOptions: { ...item.selectedOptions, [choice.id]: event.target.value },
+                          })}
+                        >
+                          {choice.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <label className="signature-notes">
+                  <span>Notas da ficha</span>
+                  <textarea value={item.notes} placeholder="Uso atual, alvos, cargas ou lembretes" onChange={(event) => updateItem(item.id, { ...item, notes: event.target.value })} />
+                </label>
+                {item.custom && (
+                  <button type="button" className="remove-action" onClick={() => onChange(items.filter((current) => current.id !== item.id))}>Remover assinatura</button>
+                )}
+              </div>
+              <div className="signature-print print-only">
+                <header><strong>{item.title || "Assinatura personalizada"}</strong><span>{item.custom ? "Personalizada" : filiationName}</span></header>
+                {item.rules && <p>{item.rules}</p>}
+                {choices.length > 0 && (
+                  <dl>
+                    {choices.map((choice) => {
+                      const selected = item.selectedOptions[choice.id] || choice.defaultValue;
+                      const label = choice.options.find((option) => option.value === selected)?.label || selected;
+                      return <div key={choice.id}><dt>{choice.label}</dt><dd>{label}</dd></div>;
+                    })}
+                  </dl>
+                )}
+                {item.notes && <p className="signature-print-notes"><strong>Notas:</strong> {item.notes}</p>}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function EquipmentEditor({
   item,
   onUpdate,
@@ -301,6 +411,33 @@ function EquipmentEditor({
   );
 }
 
+function normalizeSignatureMap(candidate: Partial<CharacterSheet>) {
+  const rawMap = candidate.filiationSignatures && typeof candidate.filiationSignatures === "object"
+    ? candidate.filiationSignatures
+    : {};
+  const normalized = Object.fromEntries(
+    Object.entries(rawMap).map(([filiationName, entries]) => [
+      filiationName,
+      Array.isArray(entries)
+        ? entries.map((entry) => ({
+          id: entry.id || makeId("signature"),
+          sourceId: entry.sourceId || entry.id || makeId("signature-source"),
+          title: entry.title || "",
+          rules: entry.rules || "",
+          selectedOptions: entry.selectedOptions && typeof entry.selectedOptions === "object"
+            ? entry.selectedOptions
+            : {},
+          notes: entry.notes || "",
+          custom: Boolean(entry.custom),
+        }))
+        : [],
+    ]),
+  );
+  return candidate.filiation
+    ? ensureFiliationSignatures(normalized, candidate.filiation)
+    : normalized;
+}
+
 function normalizeSheet(candidate: CharacterSheet): CharacterSheet {
   const { race: legacyRace, ...sheetWithoutLegacyRace } = candidate as CharacterSheet & { race?: string };
   const rawGroups = candidate.abilityGroups as Partial<Record<AbilityCategory | "legend", Ability[]>>;
@@ -309,7 +446,7 @@ function normalizeSheet(candidate: CharacterSheet): CharacterSheet {
     : rawGroups.legend;
   return {
     ...sheetWithoutLegacyRace,
-    version: 2,
+    version: 3,
     avatarDataUrl: candidate.avatarDataUrl || "",
     origin: candidate.origin || legacyRace || "",
     legendDestiny: candidate.legendDestiny || "",
@@ -318,6 +455,7 @@ function normalizeSheet(candidate: CharacterSheet): CharacterSheet {
       ? Number(candidate.castingDcOverride)
       : null,
     dracmas: Math.max(0, Number(candidate.dracmas ?? 0)),
+    filiationSignatures: normalizeSignatureMap(candidate),
     abilityGroups: {
       abilities: rawGroups.abilities || [],
       filiation: rawGroups.filiation || [],
@@ -373,7 +511,7 @@ export default function Home() {
     }
     try {
       const parsed = JSON.parse(stored) as CharacterSheet;
-      if (parsed.version === 2) setSheet(normalizeSheet(parsed));
+      if (parsed.version === 2 || parsed.version === 3) setSheet(normalizeSheet(parsed));
     } catch {
       localStorage.removeItem("semideuses-sheet-v3");
     } finally {
@@ -587,7 +725,14 @@ export default function Home() {
                 <label className="identity-filiation"><span>Filiação</span><select value={sheet.filiation} onChange={(event) => {
                   const name = event.target.value;
                   const selected = FILIATIONS[name as keyof typeof FILIATIONS];
-                  setSheet((current) => ({ ...current, filiation: name, divineResource: selected ? Math.min(current.divineResource, selected.max) : 0 }));
+                  setSheet((current) => ({
+                    ...current,
+                    filiation: name,
+                    divineResource: selected ? Math.min(current.divineResource, selected.max) : 0,
+                    filiationSignatures: name
+                      ? ensureFiliationSignatures(current.filiationSignatures, name)
+                      : current.filiationSignatures,
+                  }));
                 }}>{[<option key="empty" value="">Escolha uma filiação</option>, ...Object.keys(FILIATIONS).map((name) => <option key={name} value={name}>{name}</option>)]}</select></label>
                 <label className="identity-path"><span>Caminho divino</span><input value={sheet.pathName} onChange={(event) => patch("pathName", event.target.value)} /></label>
                 <label className="identity-origin"><span>Origem</span><input list="origin-options" placeholder="Ex.: Semideus Grego" value={sheet.origin} onChange={(event) => patch("origin", event.target.value)} /></label>
@@ -722,14 +867,43 @@ export default function Home() {
         <section className="abilities-section reveal-section" id="habilidades">
           <div className="section-toolbar"><h2>Habilidades</h2></div>
           <div className="ability-categories">
-            {ABILITY_ORDER.map((category) => (
+            <AbilitySection
+              category="abilities"
+              items={sheet.abilityGroups.abilities}
+              onChange={(items) => patch("abilityGroups", { ...sheet.abilityGroups, abilities: items })}
+            />
+            <div className="ability-pair path-signature-pair">
               <AbilitySection
-                key={category}
-                category={category}
-                items={sheet.abilityGroups[category]}
-                onChange={(items) => patch("abilityGroups", { ...sheet.abilityGroups, [category]: items })}
+                category="path"
+                items={sheet.abilityGroups.path}
+                onChange={(items) => patch("abilityGroups", { ...sheet.abilityGroups, path: items })}
               />
-            ))}
+              <FiliationSignatureSection
+                filiationName={sheet.filiation}
+                items={sheet.filiationSignatures[sheet.filiation] || []}
+                onChange={(items) => patch("filiationSignatures", {
+                  ...sheet.filiationSignatures,
+                  [sheet.filiation]: items,
+                })}
+              />
+            </div>
+            <div className="ability-pair skills-filiation-pair">
+              <AbilitySection
+                category="skills"
+                items={sheet.abilityGroups.skills}
+                onChange={(items) => patch("abilityGroups", { ...sheet.abilityGroups, skills: items })}
+              />
+              <AbilitySection
+                category="filiation"
+                items={sheet.abilityGroups.filiation}
+                onChange={(items) => patch("abilityGroups", { ...sheet.abilityGroups, filiation: items })}
+              />
+            </div>
+            <AbilitySection
+              category="talents"
+              items={sheet.abilityGroups.talents}
+              onChange={(items) => patch("abilityGroups", { ...sheet.abilityGroups, talents: items })}
+            />
           </div>
         </section>
 

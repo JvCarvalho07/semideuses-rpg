@@ -770,6 +770,15 @@ input:focus, select:focus, textarea:focus {
   grid-auto-flow: dense;
   gap: 12px;
 }
+.ability-categories > .ability-category,
+.ability-pair { grid-column: 1 / -1; }
+.ability-pair {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+}
 .equipment-workspace { width: 100%; }
 .ability-category {
   overflow: hidden;
@@ -791,7 +800,7 @@ input:focus, select:focus, textarea:focus {
 .category-path .category-heading {
   background: linear-gradient(100deg, color-mix(in srgb, var(--deity-secondary) 10%, transparent), transparent 72%);
 }
-.ability-category:first-child { grid-column: 1 / -1; }
+.ability-categories > .ability-category:first-child { grid-column: 1 / -1; }
 .category-heading {
   min-height: 88px;
   padding: 12px 14px;
@@ -815,7 +824,130 @@ input:focus, select:focus, textarea:focus {
   letter-spacing: .08em;
 }
 .category-heading button:hover, .large-add:hover { color: #111713; background: var(--deity-light); border-color: var(--deity); transform: translateY(-1px); }
+.category-heading button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+  transform: none;
+}
 .ability-list { border-top: 1px solid var(--line); }
+.filiation-signature-section {
+  border-color: color-mix(in srgb, var(--deity) 72%, var(--line));
+  box-shadow: inset 4px 0 0 var(--deity);
+}
+.filiation-signature-section .category-heading {
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--deity-light) 18%, transparent), transparent 72%),
+    radial-gradient(circle at 88% 14%, color-mix(in srgb, var(--deity) 11%, transparent), transparent 32%);
+}
+.signature-list { border-top: 1px solid var(--line); }
+.signature-card {
+  position: relative;
+  padding: 16px;
+  background: color-mix(in srgb, var(--paper-bright) 76%, var(--deity-light) 4%);
+  border-bottom: 1px solid #d8cebd;
+}
+.signature-card:last-child { border-bottom: 0; }
+.signature-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(var(--deity), color-mix(in srgb, var(--deity-secondary) 72%, var(--deity)));
+}
+.signature-card.is-custom::before { background: var(--bronze); }
+.signature-screen { min-width: 0; display: grid; gap: 12px; }
+.signature-screen > header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+.signature-screen > header > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: var(--paper-bright);
+  background: var(--deity-deep);
+  border: 1px solid var(--deity);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 20px;
+}
+.signature-screen > header > div { min-width: 0; display: grid; gap: 2px; }
+.signature-screen h4 {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 23px;
+  line-height: 1;
+}
+.signature-screen header small {
+  color: var(--deity);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+.signature-screen > p {
+  max-height: 164px;
+  margin: 0;
+  padding: 0 9px 0 0;
+  overflow: auto;
+  color: #39362f;
+  font-size: 13px;
+  font-weight: 530;
+  line-height: 1.55;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--deity) 58%, #9e9586) transparent;
+}
+.signature-screen > p::-webkit-scrollbar { width: 5px; }
+.signature-screen > p::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--deity) 58%, #9e9586); border-radius: 9px; }
+.signature-screen input,
+.signature-screen textarea,
+.signature-screen select {
+  min-width: 0;
+  width: 100%;
+  padding: 9px 10px;
+  color: var(--ink);
+  background: var(--paper-bright);
+  border: 1px solid color-mix(in srgb, var(--deity) 28%, #c4b9a5);
+  border-radius: 3px;
+  font: inherit;
+}
+.signature-screen header input {
+  padding: 3px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 21px;
+  font-weight: 650;
+}
+.signature-screen > textarea { min-height: 118px; resize: vertical; line-height: 1.5; }
+.signature-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.signature-choices label,
+.signature-notes {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+.signature-choices label > span,
+.signature-notes > span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.signature-notes textarea {
+  min-height: 58px;
+  max-height: 140px;
+  resize: vertical;
+  font-size: 12px;
+  line-height: 1.42;
+}
 .ability-card { border-bottom: 1px solid #d8cebd; }
 .ability-card:last-child { border-bottom: 0; }
 .ability-unit:last-child .ability-card { border-bottom: 0; }
@@ -1188,7 +1320,8 @@ footer a:hover { color: var(--deity-light); }
   .attributes-column, .skills-column { grid-column: 1 / -1; }
   .attributes-column { border-right: 0; border-bottom: 1px solid var(--line); }
   .ability-categories { grid-template-columns: 1fr; }
-  .ability-category:first-child { grid-column: auto; }
+  .ability-pair { grid-template-columns: 1fr; }
+  .ability-categories > .ability-category:first-child { grid-column: auto; }
   .ability-editor, .equipment-editor { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-left: 18px; }
 }
 
@@ -1264,6 +1397,10 @@ footer a:hover { color: var(--deity-light); }
   .category-heading h3 { font-size: 20px; }
   .category-heading p { font-size: 9px; }
   .category-heading button { padding: 8px; font-size: 8px; }
+  .signature-card { padding: 14px 12px; }
+  .signature-screen h4 { font-size: 21px; }
+  .signature-screen > p { max-height: none; padding-right: 0; font-size: 12.5px; }
+  .signature-choices { grid-template-columns: 1fr; }
   .ability-card summary { grid-template-columns: minmax(68px, max-content) minmax(0, 1fr) 24px; gap: 8px; padding-inline: 10px; }
   .ability-rank { max-width: 88px; min-height: 34px; padding: 5px 7px; font-size: 10px; }
   .ability-cost { grid-column: 2; padding-bottom: 12px; }
@@ -1341,6 +1478,7 @@ footer a:hover { color: var(--deity-light); }
   .equipment-editor,
   .equipment-workspace > .equipment-list,
   .personality-grid textarea,
+  .signature-screen,
   .disclosure {
     display: none !important;
   }
@@ -1497,6 +1635,7 @@ footer a:hover { color: var(--deity-light); }
   }
   .section-toolbar h2 { font-size: 22pt; }
   .ability-categories { display: block; padding-top: 0; }
+  .ability-pair { display: block; }
   .ability-category {
     margin-bottom: 4mm;
     border-radius: 1mm;
@@ -1534,6 +1673,47 @@ footer a:hover { color: var(--deity-light); }
   .ability-print { border-bottom: 1px solid #d8cebd; }
   .print-meta { display: flex; flex-wrap: wrap; gap: 1mm 3mm; color: #6e6558; font-size: 6.5pt; }
   .ability-print p { margin: 1.5mm 0 0; line-height: 1.38; white-space: pre-wrap; }
+  .signature-card {
+    padding: 3mm 4mm;
+    background: color-mix(in srgb, var(--paper-bright) 88%, var(--deity-light) 4%);
+    break-inside: avoid;
+  }
+  .signature-card::before { width: 1mm; }
+  .signature-print header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4mm;
+  }
+  .signature-print header strong {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 13pt;
+  }
+  .signature-print header span {
+    color: var(--deity);
+    font-size: 6.5pt;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .signature-print p {
+    margin: 1.5mm 0 0;
+    font-size: 7.5pt;
+    line-height: 1.42;
+  }
+  .signature-print dl {
+    margin: 2mm 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2mm 4mm;
+  }
+  .signature-print dl div { display: flex; gap: 1.5mm; }
+  .signature-print dt { color: #6d6558; font-size: 6.5pt; font-weight: 800; }
+  .signature-print dd { margin: 0; font-size: 7pt; }
+  .signature-print-notes {
+    padding-top: 1.5mm;
+    border-top: 1px solid var(--line);
+  }
 
   .print-equipment-list { border: 1px solid var(--line); border-radius: 1mm; overflow: hidden; }
   .print-equipment-list article { padding: 3mm 4mm; border-bottom: 1px solid var(--line); }

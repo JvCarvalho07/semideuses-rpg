@@ -27,6 +27,16 @@ export type Equipment = {
   notes: string;
 };
 
+export type FiliationSignatureState = {
+  id: string;
+  sourceId: string;
+  title: string;
+  rules: string;
+  selectedOptions: Record<string, string>;
+  notes: string;
+  custom: boolean;
+};
+
 export type CharacterSheet = {
   version: number;
   avatarDataUrl: string;
@@ -56,6 +66,7 @@ export type CharacterSheet = {
   initiativeExtra: number;
   caExtra: number;
   dracmas: number;
+  filiationSignatures: Record<string, FiliationSignatureState[]>;
   abilityGroups: Record<AbilityCategory, Ability[]>;
   equipment: Equipment[];
   personality: {
@@ -146,7 +157,7 @@ const ability = (
 });
 
 export const INITIAL_SHEET: CharacterSheet = {
-  version: 2,
+  version: 3,
   avatarDataUrl: "",
   name: "",
   legendDestiny: "",
@@ -173,6 +184,7 @@ export const INITIAL_SHEET: CharacterSheet = {
   initiativeExtra: 0,
   caExtra: 0,
   dracmas: 0,
+  filiationSignatures: {},
   abilityGroups: { abilities: [], filiation: [], path: [], skills: [], talents: [] },
   equipment: [],
   personality: {
