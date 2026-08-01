@@ -126,16 +126,25 @@ export function normalizeImportedSheet(candidate: unknown): { sheet: CharacterSh
   const attributes = Object.fromEntries(ATTRIBUTES.map((key) => [key, num(dict(raw.attributes)[key], 10)])) as CharacterSheet["attributes"];
   const personalityRaw = dict(raw.personality);
   const personality = Object.fromEntries(["trait", "ideal", "bond", "flaw", "backgroundTrait", "backgroundBond", "appearance", "history", "notes"].map((key) => [key, str(personalityRaw[key])])) as CharacterSheet["personality"];
-  const known = ["version", "avatarDataUrl", "name", "legendDestiny", "legacyLegendEntries", "filiation", "pathName", "origin", "race", "background", "player", "level", "hp", "hpMax", "hpTemp", "mana", "manaMax", "divineResource", "favor", "sustain", "castingAttribute", "castingDcOverride", "attributes", "saveProficiencies", "skillRanks", "speed", "initiativeExtra", "caExtra", "dracmas", "filiationSignatures", "abilityGroups", "equipment", "personality", "importReport"];
+  const hpMax = Math.max(0, num(raw.hpMax));
+  const manaMax = Math.max(0, num(raw.manaMax));
+  const known = ["version", "avatarDataUrl", "name", "legendDestiny", "legacyLegendEntries", "filiation", "pathName", "origin", "race", "background", "player", "level", "hp", "hpMax", "hpTemp", "mana", "manaMax", "divineResource", "favor", "sustain", "castingAttribute", "castingDcOverride", "attributes", "saveProficiencies", "skillRanks", "speed", "initiativeExtra", "caExtra", "caOverride", "initiativeOverride", "speedOverride", "perceptionOverride", "dracmas", "humanMoney", "humanMoneyCurrency", "money", "currency", "filiationSignatures", "abilityGroups", "equipment", "personality", "importReport"];
   report.unknownFields.push(...Object.keys(raw).filter((key) => !known.includes(key)));
   const base: CharacterSheet = {
     ...INITIAL_SHEET, version: 3, avatarDataUrl: str(raw.avatarDataUrl), name: str(raw.name), legendDestiny: str(raw.legendDestiny),
     filiation: str(raw.filiation), pathName: str(raw.pathName), origin: str(raw.origin, legacyOrigin), background: str(raw.background), player: str(raw.player),
-    level: Math.max(1, Math.floor(num(raw.level, 1))), hp: Math.max(0, num(raw.hp)), hpMax: Math.max(0, num(raw.hpMax)), hpTemp: Math.max(0, num(raw.hpTemp)),
-    mana: Math.max(0, num(raw.mana)), manaMax: Math.max(0, num(raw.manaMax)), divineResource: Math.max(0, num(raw.divineResource)), favor: Math.max(0, Math.min(5, num(raw.favor))), sustain: Math.max(0, num(raw.sustain)),
+    level: Math.max(1, Math.floor(num(raw.level, 1))), hp: Math.min(hpMax, Math.max(0, num(raw.hp))), hpMax, hpTemp: Math.max(0, num(raw.hpTemp)),
+    mana: Math.min(manaMax, Math.max(0, num(raw.mana))), manaMax, divineResource: Math.max(0, num(raw.divineResource)), favor: Math.max(0, Math.min(5, num(raw.favor))), sustain: Math.max(0, num(raw.sustain)),
     castingAttribute: ATTRIBUTES.includes(raw.castingAttribute as AttributeKey) ? raw.castingAttribute as AttributeKey : "sab", castingDcOverride: raw.castingDcOverride == null ? null : num(raw.castingDcOverride),
     attributes, saveProficiencies: arr(raw.saveProficiencies).filter((value): value is AttributeKey => ATTRIBUTES.includes(value as AttributeKey)), skillRanks: Object.fromEntries(Object.entries(dict(raw.skillRanks)).map(([key, value]) => [key, num(value)])),
-    speed: num(raw.speed), initiativeExtra: num(raw.initiativeExtra), caExtra: num(raw.caExtra), dracmas: Math.max(0, num(raw.dracmas)),
+    speed: num(raw.speed), initiativeExtra: num(raw.initiativeExtra), caExtra: num(raw.caExtra),
+    caOverride: raw.caOverride == null ? null : num(raw.caOverride),
+    initiativeOverride: raw.initiativeOverride == null ? null : num(raw.initiativeOverride),
+    speedOverride: raw.speedOverride == null ? null : num(raw.speedOverride),
+    perceptionOverride: raw.perceptionOverride == null ? null : num(raw.perceptionOverride),
+    dracmas: Math.max(0, num(raw.dracmas)),
+    humanMoney: Math.max(0, num(first(raw, "humanMoney", "money"))),
+    humanMoneyCurrency: str(first(raw, "humanMoneyCurrency", "currency"), "R$"),
     filiationSignatures: normalizeSignatures(raw.filiationSignatures, str(raw.filiation), report), abilityGroups: groups,
     legacyLegendEntries: legacyLegend.map((item, index) => normalizeAbility(item, "legend", index, report)), equipment: arr(raw.equipment).map((item, index) => normalizeEquipment(item, index, report)), personality,
   };

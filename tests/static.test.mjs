@@ -25,6 +25,12 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(model, /abilityGroups: \{ abilities: \[\], filiation: \[\], path: \[\], skills: \[\], talents: \[\] \}/);
   assert.match(model, /equipment: \[\],/);
   assert.match(model, /dracmas: 0,/);
+  assert.match(model, /humanMoney: 0,/);
+  assert.match(model, /humanMoneyCurrency: "R\$",/);
+  assert.match(model, /caOverride: null,/);
+  assert.match(model, /initiativeOverride: null,/);
+  assert.match(model, /speedOverride: null,/);
+  assert.match(model, /perceptionOverride: null,/);
   assert.match(model, /version: 3,/);
   assert.match(model, /filiationSignatures: \{\},/);
   assert.doesNotMatch(model, /Héstia|Hestia/);
@@ -46,6 +52,11 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /FiliationSignatureSection/);
   assert.match(app, /ability-column-left/);
   assert.match(app, /ability-column-right/);
+  assert.match(app, /function AbilityCard/);
+  assert.match(app, /function SignatureWorkspace/);
+  assert.match(app, /createPortal/);
+  assert.match(app, /Aumentar \$\{label\}/);
+  assert.match(app, /equipmentGroups/);
   assert.match(app, /ability-print-flow/);
   assert.match(app, /Assinatura da filiação/);
   assert.match(app, /Caminho divino/);
@@ -80,6 +91,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /ability-column-right/);
   assert.match(css, /\.ability-print-flow/);
   assert.match(css, /\.equipment-mode-filters/);
+  assert.match(css, /\.signature-editor-layer/);
+  assert.match(css, /\.number-max-print/);
+  assert.match(css, /\.currency-field/);
   assert.match(app, /Restaurar oficial/);
   assert.match(app, /Adicionar linha/);
   assert.match(app, /equipmentMode/);
@@ -87,6 +101,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(model, /SignatureMove/);
   assert.deepEqual(JSON.parse(template).abilityGroups, { abilities: [], filiation: [], path: [], skills: [], talents: [] });
   assert.ok(JSON.parse(schema).$defs.filiationSignature.properties.moves);
+  assert.ok(JSON.parse(schema).properties.humanMoney);
+  assert.ok(JSON.parse(schema).properties.humanMoneyCurrency);
+  assert.ok(JSON.parse(schema).properties.caOverride);
   assert.equal((signatures.match(/id: "[^"]+",\n\s+title:/g) || []).length, 26);
   assert.match(signatures, /zeus-tempestade-crescente/);
   assert.match(signatures, /ares-furia/);

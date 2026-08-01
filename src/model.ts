@@ -102,7 +102,13 @@ export type CharacterSheet = {
   speed: number;
   initiativeExtra: number;
   caExtra: number;
+  caOverride: number | null;
+  initiativeOverride: number | null;
+  speedOverride: number | null;
+  perceptionOverride: number | null;
   dracmas: number;
+  humanMoney: number;
+  humanMoneyCurrency: string;
   filiationSignatures: Record<string, FiliationSignatureState[]>;
   abilityGroups: Record<AbilityCategory, Ability[]>;
   equipment: Equipment[];
@@ -221,7 +227,13 @@ export const INITIAL_SHEET: CharacterSheet = {
   speed: 0,
   initiativeExtra: 0,
   caExtra: 0,
+  caOverride: null,
+  initiativeOverride: null,
+  speedOverride: null,
+  perceptionOverride: null,
   dracmas: 0,
+  humanMoney: 0,
+  humanMoneyCurrency: "R$",
   filiationSignatures: {},
   abilityGroups: { abilities: [], filiation: [], path: [], skills: [], talents: [] },
   equipment: [],
