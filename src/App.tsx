@@ -19,6 +19,7 @@ import {
 } from "./model";
 import {
   ensureFiliationSignatures,
+  makeOfficialState,
   signatureDefinition,
 } from "./filiationSignatures";
 import { normalizeImportedSheet } from "./import";
@@ -178,15 +179,21 @@ function AbilityEditor({
   ability,
   onUpdate,
   onRemove,
+  forceOpen,
 }: {
   ability: Ability;
   onUpdate: (ability: Ability) => void;
   onRemove: () => void;
+  forceOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(!ability.name);
+  useEffect(() => {
+    if (forceOpen !== undefined) setOpen(forceOpen);
+  }, [forceOpen]);
   const update = (key: keyof Ability, value: string | number) => onUpdate({ ...ability, [key]: value });
   return (
     <div className="ability-unit">
-      <details className="ability-card" open={!ability.name || undefined}>
+      <details className="ability-card" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
         <summary>
           <span className="ability-rank">{ability.rank || "—"}</span>
           <span>
@@ -225,12 +232,26 @@ function AbilitySection({
   category,
   items,
   onChange,
+  search,
+  actionFilter,
+  categoryFilter,
+  expandAll,
 }: {
   category: AbilityCategory;
   items: Ability[];
   onChange: (items: Ability[]) => void;
+  search: string;
+  actionFilter: string;
+  categoryFilter: string;
+  expandAll: boolean | undefined;
 }) {
+  if (categoryFilter !== "Todas" && categoryFilter !== category) return null;
   const meta = ABILITY_META[category];
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+  const visibleItems = items.filter((item) => {
+    const haystack = [item.name, item.rank, item.activation, item.cost, item.description, item.range, item.duration, item.recharge, item.notes].join(" ").toLocaleLowerCase();
+    return (!normalizedSearch || haystack.includes(normalizedSearch)) && (!actionFilter || item.activation === actionFilter);
+  });
   const add = () =>
     onChange([
       ...items,
@@ -254,15 +275,17 @@ function AbilitySection({
         <div>
           <h3>{meta.title}</h3>
         </div>
-        <span>{items.length}</span>
+        <span title={visibleItems.length === items.length ? undefined : `${visibleItems.length} visíveis de ${items.length}`}>{visibleItems.length === items.length ? items.length : `${visibleItems.length}/${items.length}`}</span>
         <button type="button" onClick={add}>Adicionar</button>
       </div>
       <div className="ability-list">
-        {items.length === 0 && <p className="empty-state">Vazio.</p>}
-        {items.map((item) => (
+        {items.length === 0 && <p className="empty-state">Vazio. Adicione a primeira entrada nesta categoria.</p>}
+        {items.length > 0 && visibleItems.length === 0 && <p className="empty-state">Nenhuma entrada corresponde aos filtros atuais.</p>}
+        {visibleItems.map((item) => (
           <AbilityEditor
             key={item.id}
             ability={item}
+            forceOpen={expandAll}
             onUpdate={(updated) => onChange(items.map((current) => current.id === item.id ? updated : current))}
             onRemove={() => onChange(items.filter((current) => current.id !== item.id))}
           />
@@ -276,10 +299,12 @@ function FiliationSignatureSection({
   filiationName,
   items,
   onChange,
+  onResourceChange,
 }: {
   filiationName: string;
   items: FiliationSignatureState[];
   onChange: (items: FiliationSignatureState[]) => void;
+  onResourceChange?: (value: number) => void;
 }) {
   const updateItem = (id: string, updated: FiliationSignatureState) => {
     onChange(items.map((item) => item.id === id ? updated : item));
@@ -315,50 +340,81 @@ function FiliationSignatureSection({
         {items.map((item) => {
           const definition = signatureDefinition(item);
           const choices = definition?.choices || [];
+          const resource = item.resource;
+          const moves = item.moves || [];
+          const officialRules = item.officialSnapshot?.rules || item.rules;
+          const restoreOfficial = () => {
+            if (!definition) return;
+            const official = makeOfficialState(definition, filiationName);
+            updateItem(item.id, { ...official, id: item.id });
+          };
           return (
             <article className={`signature-card ${item.custom ? "is-custom" : "is-official"}`} key={item.id}>
-              <div className="signature-screen">
-                <header>
+              <details className="signature-disclosure" open={item.custom || undefined}>
+                <summary className="signature-summary">
                   <span aria-hidden="true">{item.custom ? "+" : "Σ"}</span>
-                  <div>
-                    {item.custom
-                      ? <input aria-label="Nome da assinatura personalizada" placeholder="Nome da assinatura" value={item.title} onChange={(event) => updateItem(item.id, { ...item, title: event.target.value })} />
-                      : <h4>{item.title}</h4>}
-                    <small>{item.custom ? "Personalizada" : filiationName}</small>
+                  <span><strong>{item.title || "Assinatura sem nome"}</strong><small>{item.custom ? "Personalizada" : filiationName}{resource ? ` · ${resource.name} ${resource.current}/${resource.max}` : ""}</small></span>
+                  <span className="signature-summary-meta">{moves.length} {moves.length === 1 ? "efeito" : "efeitos"}</span>
+                  <span className="disclosure">+</span>
+                </summary>
+                <div className="signature-screen">
+                  <div className="signature-structured-grid">
+                    <label>Nome<input value={item.title} onChange={(event) => updateItem(item.id, { ...item, title: event.target.value })} /></label>
+                    <label className="span-full">Resumo<textarea value={item.summary || item.rules} onChange={(event) => updateItem(item.id, { ...item, summary: event.target.value, rules: event.target.value })} /></label>
+                    {resource && (
+                      <fieldset className="signature-resource span-full">
+                        <legend>Recurso ou medidor</legend>
+                        <label>Nome<input value={resource.name} onChange={(event) => updateItem(item.id, { ...item, resource: { ...resource, name: event.target.value } })} /></label>
+                        <label>Atual<input type="number" min={0} value={resource.current} onChange={(event) => { const current = Math.max(0, Number(event.target.value)); updateItem(item.id, { ...item, resource: { ...resource, current } }); onResourceChange?.(current); }} /></label>
+                        <label>Máximo<input type="number" min={0} value={resource.max} onChange={(event) => updateItem(item.id, { ...item, resource: { ...resource, max: Math.max(0, Number(event.target.value)) } })} /></label>
+                        <label>Unidade<input value={resource.unit} onChange={(event) => updateItem(item.id, { ...item, resource: { ...resource, unit: event.target.value } })} /></label>
+                      </fieldset>
+                    )}
+                    <label>Ganho e recuperação<textarea value={item.recovery || ""} placeholder="Gatilhos, descanso e recuperação" onChange={(event) => updateItem(item.id, { ...item, recovery: event.target.value })} /></label>
+                    <label>Custos e consumos<textarea value={item.costs || ""} placeholder="Custos, limites e consumos" onChange={(event) => updateItem(item.id, { ...item, costs: event.target.value })} /></label>
                   </div>
-                </header>
-                {item.custom
-                  ? <textarea aria-label="Regras da assinatura personalizada" placeholder="Regras, cargas, progressão e escolhas" value={item.rules} onChange={(event) => updateItem(item.id, { ...item, rules: event.target.value })} />
-                  : <p>{item.rules}</p>}
-                {choices.length > 0 && (
-                  <div className="signature-choices">
-                    {choices.map((choice) => (
-                      <label key={choice.id}>
-                        <span>{choice.label}</span>
-                        <select
-                          value={item.selectedOptions[choice.id] || choice.defaultValue}
-                          onChange={(event) => updateItem(item.id, {
-                            ...item,
-                            selectedOptions: { ...item.selectedOptions, [choice.id]: event.target.value },
-                          })}
-                        >
-                          {choice.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                        </select>
-                      </label>
+
+                  <div className="signature-moves">
+                    <div className="signature-subheading"><strong>Efeitos e manobras</strong><button type="button" onClick={() => updateItem(item.id, { ...item, moves: [...moves, { id: makeId("signature-move"), name: "", cost: "", activation: "", description: "" }] })}>Adicionar linha</button></div>
+                    {moves.length === 0 && <p className="empty-state">Nenhuma linha estruturada. Adicione uma manobra ou mantenha a referência oficial abaixo.</p>}
+                    {moves.map((move, moveIndex) => (
+                      <div className="signature-move-row" key={move.id}>
+                        <label>Nome<input value={move.name} onChange={(event) => updateItem(item.id, { ...item, moves: moves.map((current) => current.id === move.id ? { ...current, name: event.target.value } : current) })} /></label>
+                        <label>Custo<input value={move.cost} onChange={(event) => updateItem(item.id, { ...item, moves: moves.map((current) => current.id === move.id ? { ...current, cost: event.target.value } : current) })} /></label>
+                        <label>Ação<input value={move.activation} onChange={(event) => updateItem(item.id, { ...item, moves: moves.map((current) => current.id === move.id ? { ...current, activation: event.target.value } : current) })} /></label>
+                        <label className="span-2">Descrição<textarea value={move.description} onChange={(event) => updateItem(item.id, { ...item, moves: moves.map((current) => current.id === move.id ? { ...current, description: event.target.value } : current) })} /></label>
+                        <div className="signature-move-actions">
+                          <button type="button" onClick={() => updateItem(item.id, { ...item, moves: moveIndex === 0 ? moves : moves.map((current, index) => index === moveIndex - 1 ? moves[moveIndex] : index === moveIndex ? moves[moveIndex - 1] : current) })} disabled={moveIndex === 0} aria-label="Mover linha para cima">↑</button>
+                          <button type="button" onClick={() => updateItem(item.id, { ...item, moves: moveIndex === moves.length - 1 ? moves : moves.map((current, index) => index === moveIndex ? moves[moveIndex + 1] : index === moveIndex + 1 ? moves[moveIndex] : current) })} disabled={moveIndex === moves.length - 1} aria-label="Mover linha para baixo">↓</button>
+                          <button type="button" className="remove-action" onClick={() => updateItem(item.id, { ...item, moves: moves.filter((current) => current.id !== move.id) })}>Remover</button>
+                        </div>
+                      </div>
                     ))}
                   </div>
-                )}
-                <label className="signature-notes">
-                  <span>Notas da ficha</span>
-                  <textarea value={item.notes} placeholder="Uso atual, alvos, cargas ou lembretes" onChange={(event) => updateItem(item.id, { ...item, notes: event.target.value })} />
-                </label>
-                {item.custom && (
-                  <button type="button" className="remove-action" onClick={() => onChange(items.filter((current) => current.id !== item.id))}>Remover assinatura</button>
-                )}
-              </div>
+
+                  {choices.length > 0 && (
+                    <div className="signature-choices">
+                      {choices.map((choice) => (
+                        <label key={choice.id}><span>{choice.label}</span><select value={item.selectedOptions[choice.id] || choice.defaultValue} onChange={(event) => updateItem(item.id, { ...item, selectedOptions: { ...item.selectedOptions, [choice.id]: event.target.value } })}>{choice.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+                      ))}
+                    </div>
+                  )}
+                  <details className="signature-reference"><summary>Referência oficial · página {item.officialSnapshot?.pdfPage || definition?.source.pdfPage || "—"}</summary><p>{officialRules || "Nenhuma referência oficial registrada."}</p></details>
+                  <label className="signature-notes"><span>Observações da ficha</span><textarea value={item.notes} placeholder="Uso atual, alvos, cargas ou lembretes" onChange={(event) => updateItem(item.id, { ...item, notes: event.target.value })} /></label>
+                  <div className="signature-footer-actions">
+                    <button type="button" className="signature-restore" onClick={restoreOfficial} disabled={!definition}>Restaurar oficial</button>
+                    {item.custom && <button type="button" className="remove-action" onClick={() => onChange(items.filter((current) => current.id !== item.id))}>Remover assinatura</button>}
+                  </div>
+                </div>
+              </details>
               <div className="signature-print print-only">
                 <header><strong>{item.title || "Assinatura personalizada"}</strong><span>{item.custom ? "Personalizada" : filiationName}</span></header>
-                {item.rules && <p>{item.rules}</p>}
+                {item.officialSnapshot?.rules && <p><strong>Referência oficial:</strong> {item.officialSnapshot.rules}</p>}
+                {item.summary && <p><strong>Resumo:</strong> {item.summary}</p>}
+                {item.resource && <dl><div><dt>Recurso</dt><dd>{item.resource.name} {item.resource.current}/{item.resource.max} {item.resource.unit}</dd></div></dl>}
+                {item.recovery && <p><strong>Ganho e recuperação:</strong> {item.recovery}</p>}
+                {item.costs && <p><strong>Custos:</strong> {item.costs}</p>}
+                {item.moves?.length ? <dl>{item.moves.map((move) => <div key={move.id}><dt>{move.name}</dt><dd>{[move.cost, move.activation, move.description].filter(Boolean).join(" · ")}</dd></div>)}</dl> : null}
                 {choices.length > 0 && (
                   <dl>
                     {choices.map((choice) => {
@@ -412,6 +468,77 @@ function EquipmentEditor({
   );
 }
 
+function AbilityLayout({
+  sheet,
+  compact,
+  search,
+  actionFilter,
+  categoryFilter,
+  expandAll,
+  onChange,
+}: {
+  sheet: CharacterSheet;
+  compact: boolean;
+  search: string;
+  actionFilter: string;
+  categoryFilter: string;
+  expandAll: boolean | undefined;
+  onChange: (updater: (current: CharacterSheet) => CharacterSheet) => void;
+}) {
+  const section = (category: AbilityCategory) => (
+    <AbilitySection
+      key={category}
+      category={category}
+      items={sheet.abilityGroups[category]}
+      search={search}
+      actionFilter={actionFilter}
+      categoryFilter={categoryFilter}
+      expandAll={expandAll}
+      onChange={(items) => onChange((current) => ({ ...current, abilityGroups: { ...current.abilityGroups, [category]: items } }))}
+    />
+  );
+  const signature = (
+    <FiliationSignatureSection
+      key="signature"
+      filiationName={sheet.filiation}
+      items={sheet.filiationSignatures[sheet.filiation] || []}
+      onResourceChange={(value) => onChange((current) => ({ ...current, divineResource: value }))}
+      onChange={(items) => onChange((current) => ({ ...current, filiationSignatures: { ...current.filiationSignatures, [sheet.filiation]: items } }))}
+    />
+  );
+
+  return (
+    <>
+      <div className={`ability-categories ${compact ? "is-compact-flow" : "is-desktop-stacks"}`}>
+        {compact ? (
+          <div className="ability-flow">
+            {signature}
+            {section("path")}
+            {section("skills")}
+            {section("filiation")}
+            {section("abilities")}
+            {section("talents")}
+          </div>
+        ) : (
+          <>
+            <div className="ability-column ability-column-left">{section("path")}{section("skills")}</div>
+            <div className="ability-column ability-column-right">{signature}{section("filiation")}</div>
+            <div className="ability-lower-grid">{section("abilities")}{section("talents")}</div>
+          </>
+        )}
+      </div>
+      <div className="ability-print-flow print-only">
+        {signature}
+        {section("path")}
+        {section("skills")}
+        {section("filiation")}
+        {section("abilities")}
+        {section("talents")}
+      </div>
+    </>
+  );
+}
+
 function normalizeSheet(candidate: unknown): CharacterSheet {
   return normalizeImportedSheet(candidate).sheet;
 }
@@ -422,11 +549,26 @@ export default function Home() {
   const [saved, setSaved] = useState(false);
   const [importNotice, setImportNotice] = useState<string[]>([]);
   const [equipmentFilter, setEquipmentFilter] = useState("Todos");
+  const [equipmentMode, setEquipmentMode] = useState<"Todos" | "Equipados" | "Inventário">("Todos");
+  const [equipmentSearch, setEquipmentSearch] = useState("");
+  const [abilitySearch, setAbilitySearch] = useState("");
+  const [abilityCategoryFilter, setAbilityCategoryFilter] = useState("Todas");
+  const [abilityActionFilter, setAbilityActionFilter] = useState("");
+  const [abilityExpandAll, setAbilityExpandAll] = useState<boolean | undefined>(undefined);
+  const [compactViewport, setCompactViewport] = useState(() => window.matchMedia("(max-width: 800px)").matches);
   const [legendOpen, setLegendOpen] = useState(false);
   const [printFormat, setPrintFormat] = useState<PrintFormat>(initialPrintFormat);
   const importRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 800px)");
+    const updateViewport = () => setCompactViewport(media.matches);
+    updateViewport();
+    media.addEventListener("change", updateViewport);
+    return () => media.removeEventListener("change", updateViewport);
+  }, []);
 
   useGSAP(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -618,9 +760,15 @@ export default function Home() {
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.print()));
   }
 
-  const filteredEquipment = equipmentFilter === "Todos"
-    ? sheet.equipment
-    : sheet.equipment.filter((item) => item.type === equipmentFilter);
+  const filteredEquipment = sheet.equipment.filter((item) => {
+    const matchesType = equipmentFilter === "Todos" || item.type === equipmentFilter;
+    const matchesMode = equipmentMode === "Todos" || (equipmentMode === "Equipados" ? item.equipped : !item.equipped);
+    const query = equipmentSearch.trim().toLocaleLowerCase();
+    const matchesSearch = !query || [item.name, item.type, item.properties, item.notes, item.attack, item.damage].join(" ").toLocaleLowerCase().includes(query);
+    return matchesType && matchesMode && matchesSearch;
+  });
+  const equippedCount = sheet.equipment.filter((item) => item.equipped).length;
+  const inventoryCount = sheet.equipment.length - equippedCount;
 
   return (
     <main
@@ -824,51 +972,22 @@ export default function Home() {
         </section>
 
         <section className="abilities-section reveal-section" id="habilidades">
-          <div className="section-toolbar"><h2>Habilidades</h2></div>
-          <div className="ability-categories">
-            <AbilitySection
-              category="abilities"
-              items={sheet.abilityGroups.abilities}
-              onChange={(items) => patch("abilityGroups", { ...sheet.abilityGroups, abilities: items })}
-            />
-            <div className="ability-pair path-signature-pair">
-              <AbilitySection
-                category="path"
-                items={sheet.abilityGroups.path}
-                onChange={(items) => patch("abilityGroups", { ...sheet.abilityGroups, path: items })}
-              />
-              <FiliationSignatureSection
-                filiationName={sheet.filiation}
-                items={sheet.filiationSignatures[sheet.filiation] || []}
-                onChange={(items) => patch("filiationSignatures", {
-                  ...sheet.filiationSignatures,
-                  [sheet.filiation]: items,
-                })}
-              />
+          <div className="section-toolbar abilities-toolbar">
+            <h2>Habilidades</h2>
+            <div className="ability-toolbar-controls">
+              <label className="ability-search"><span className="sr-only">Buscar habilidades</span><input value={abilitySearch} placeholder="Buscar por nome, custo ou ação" onChange={(event) => setAbilitySearch(event.target.value)} /></label>
+              <label className="ability-filter"><span className="sr-only">Filtrar categoria</span><select value={abilityCategoryFilter} onChange={(event) => setAbilityCategoryFilter(event.target.value)}><option>Todas</option><option value="abilities">Gerais</option><option value="path">Caminho</option><option value="skills">Skills</option><option value="filiation">Filiação</option><option value="talents">Talentos</option></select></label>
+              <label className="ability-filter"><span className="sr-only">Filtrar ação</span><select value={abilityActionFilter} onChange={(event) => setAbilityActionFilter(event.target.value)}><option value="">Todas as ações</option><option>Passiva</option><option>Ação</option><option>Ação Bônus</option><option>Reação</option></select></label>
+              <button type="button" className="ability-expand-toggle" onClick={() => setAbilityExpandAll(abilityExpandAll === true ? false : true)}>{abilityExpandAll === true ? "Recolher tudo" : "Expandir tudo"}</button>
             </div>
-            <div className="ability-pair skills-filiation-pair">
-              <AbilitySection
-                category="skills"
-                items={sheet.abilityGroups.skills}
-                onChange={(items) => patch("abilityGroups", { ...sheet.abilityGroups, skills: items })}
-              />
-              <AbilitySection
-                category="filiation"
-                items={sheet.abilityGroups.filiation}
-                onChange={(items) => patch("abilityGroups", { ...sheet.abilityGroups, filiation: items })}
-              />
-            </div>
-            <AbilitySection
-              category="talents"
-              items={sheet.abilityGroups.talents}
-              onChange={(items) => patch("abilityGroups", { ...sheet.abilityGroups, talents: items })}
-            />
           </div>
+          <AbilityLayout sheet={sheet} compact={compactViewport} search={abilitySearch} actionFilter={abilityActionFilter} categoryFilter={abilityCategoryFilter} expandAll={abilityExpandAll} onChange={(updater) => setSheet(updater)} />
         </section>
 
         <section className="equipment-section reveal-section" id="equipamentos">
           <div className="section-toolbar equipment-toolbar">
             <h2>Equipamentos</h2>
+            <div className="equipment-ac-summary"><span>CA com equipamentos</span><strong>{armorClass}</strong><small>{equippedArmor.length ? `${equippedArmor.length} armadura${equippedArmor.length > 1 ? "s" : ""} equipada${equippedArmor.length > 1 ? "s" : ""}` : "base + bônus equipados"}</small></div>
             <div className="equipment-actions">
               <label className="currency-field">
                 <span>Dracmas</span>
@@ -880,21 +999,25 @@ export default function Home() {
                   onChange={(event) => patch("dracmas", Math.max(0, Number(event.target.value)))}
                 />
               </label>
+              <div className="currency-print print-only"><span>Dracmas</span><strong>{sheet.dracmas}</strong></div>
               <button type="button" className="large-add" onClick={() => patch("equipment", [...sheet.equipment, { id: makeId("eq"), name: "", type: "Outro", quantity: 1, equipped: false, armorClass: 0, attack: "", damage: "", properties: "", notes: "" }])}>Adicionar equipamento</button>
             </div>
           </div>
           <div className="equipment-workspace">
-            <div className="equipment-filters">{["Todos", ...EQUIPMENT_TYPES].map((type) => <button type="button" key={type} className={equipmentFilter === type ? "active" : ""} onClick={() => setEquipmentFilter(type)}>{type}</button>)}</div>
-            <div className="equipment-list">
-              {filteredEquipment.length === 0 && <p className="empty-state">Nenhum equipamento deste tipo.</p>}
-              {filteredEquipment.map((item) => (
-                <EquipmentEditor
-                  key={item.id}
-                  item={item}
-                  onUpdate={(updated) => patch("equipment", sheet.equipment.map((current) => current.id === item.id ? updated : current))}
-                  onRemove={() => patch("equipment", sheet.equipment.filter((current) => current.id !== item.id))}
-                />
-              ))}
+            <div className="equipment-control-row">
+              <label className="equipment-search"><span className="sr-only">Buscar equipamentos</span><input value={equipmentSearch} placeholder="Buscar equipamento" onChange={(event) => setEquipmentSearch(event.target.value)} /></label>
+              <div className="equipment-mode-filters" aria-label="Estado do inventário">{(["Todos", "Equipados", "Inventário"] as const).map((mode) => <button type="button" key={mode} className={equipmentMode === mode ? "active" : ""} onClick={() => setEquipmentMode(mode)}>{mode} <small>{mode === "Todos" ? sheet.equipment.length : mode === "Equipados" ? equippedCount : inventoryCount}</small></button>)}</div>
+            </div>
+            <div className="equipment-filters" aria-label="Tipos de equipamento">{["Todos", ...EQUIPMENT_TYPES].map((type) => <button type="button" key={type} className={equipmentFilter === type ? "active" : ""} onClick={() => setEquipmentFilter(type)}>{type}</button>)}</div>
+            <div className="equipment-groups">
+              {(["Equipados", "Inventário"] as const).map((group) => {
+                const groupItems = filteredEquipment.filter((item) => group === "Equipados" ? item.equipped : !item.equipped);
+                if (equipmentMode !== "Todos" && equipmentMode !== group) return null;
+                return <section className="equipment-group" key={group}><header><h3>{group}</h3><span>{groupItems.length}</span></header><div className="equipment-list">
+                  {groupItems.length === 0 && <p className="empty-state">Nenhum item nesta lista.</p>}
+                  {groupItems.map((item) => <EquipmentEditor key={item.id} item={item} onUpdate={(updated) => patch("equipment", sheet.equipment.map((current) => current.id === item.id ? updated : current))} onRemove={() => patch("equipment", sheet.equipment.filter((current) => current.id !== item.id))} />)}
+                </div></section>;
+              })}
             </div>
             <div className="print-equipment-list print-only">
               {sheet.equipment.map((item) => (

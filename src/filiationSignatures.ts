@@ -1,4 +1,4 @@
-import type { FILIATIONS, FiliationSignatureState } from "./model";
+import { FILIATIONS, type FiliationSignatureState, type SignatureMove, type SignatureResource } from "./model";
 
 export type SignatureChoice = {
   id: string;
@@ -17,6 +17,53 @@ export type FiliationSignatureDefinition = {
     pdfPage: number;
   };
 };
+
+function summaryFromRules(rules: string) {
+  const sentence = rules.match(/^(.{1,180}?[.!?])(?:\s|$)/)?.[1];
+  return sentence || rules.slice(0, 180);
+}
+
+function activationFromText(text: string) {
+  const lower = text.toLowerCase();
+  if (lower.includes("ação bônus")) return "Ação Bônus";
+  if (lower.includes("reação")) return "Reação";
+  if (lower.includes("ação")) return "Ação";
+  return "Conforme descrição";
+}
+
+function movesFromRules(id: string, rules: string): SignatureMove[] {
+  const moves = rules.split(/;\s+/).flatMap((part, index) => {
+    const match = part.match(/(?:^|:\s*)([^,:-]+),\s*([^ -]+(?:\s+[^ -]+)?)\s*-\s*(.+)$/);
+    if (!match) return [];
+    return [{ id: `${id}-move-${index + 1}`, name: match[1].trim(), cost: match[2].trim(), activation: activationFromText(match[3]), description: match[3].trim() }];
+  });
+  return moves.length ? moves : [{ id: `${id}-reference`, name: "Referência oficial", cost: "", activation: "Conforme descrição", description: rules }];
+}
+
+function defaultResource(filiation: string): SignatureResource | undefined {
+  const entry = FILIATIONS[filiation as keyof typeof FILIATIONS];
+  return entry ? { name: entry.resource, current: 0, max: entry.max, unit: "cargas" } : undefined;
+}
+
+export function makeOfficialState(definition: FiliationSignatureDefinition, filiation = ""): FiliationSignatureState {
+  return {
+    id: definition.id,
+    sourceId: definition.id,
+    title: definition.title,
+    rules: definition.rules,
+    selectedOptions: Object.fromEntries(
+      (definition.choices || []).map((choice) => [choice.id, choice.defaultValue]),
+    ),
+    notes: "",
+    custom: false,
+    summary: summaryFromRules(definition.rules),
+    resource: defaultResource(filiation),
+    recovery: "",
+    costs: "",
+    moves: movesFromRules(definition.id, definition.rules),
+    officialSnapshot: { sourceId: definition.id, title: definition.title, rules: definition.rules, pdfPage: definition.source.pdfPage },
+  };
+}
 
 // Fonte de manutenção: Livro do Jogador - Semideuses RPG 3e, capítulo 4,
 // "As Filiações - os 26 Deuses", páginas PDF 31-65. O Livro do Mestre foi
@@ -233,33 +280,43 @@ export const FILIATION_SIGNATURES: Record<keyof typeof FILIATIONS, FiliationSign
   }],
 };
 
-function makeOfficialState(definition: FiliationSignatureDefinition): FiliationSignatureState {
-  return {
-    id: definition.id,
-    sourceId: definition.id,
-    title: definition.title,
-    rules: definition.rules,
-    selectedOptions: Object.fromEntries(
-      (definition.choices || []).map((choice) => [choice.id, choice.defaultValue]),
-    ),
-    notes: "",
-    custom: false,
-  };
-}
-
 export function ensureFiliationSignatures(
   states: Record<string, FiliationSignatureState[]> | undefined,
   filiation: string,
 ) {
   const currentStates = states || {};
-  const existing = currentStates[filiation] || [];
+  const existing = (currentStates[filiation] || []).map((entry) => {
+    const definition = Object.values(FILIATION_SIGNATURES).flat().find((item) => item.id === entry.sourceId);
+    if (!definition) {
+      return {
+        ...entry,
+        summary: entry.summary || entry.rules || entry.title,
+        recovery: entry.recovery || "",
+        costs: entry.costs || "",
+        moves: entry.moves || [{ id: `${entry.id}-reference`, name: "Referência da ficha", cost: "", activation: "Conforme descrição", description: entry.rules || "" }],
+      };
+    }
+    const official = makeOfficialState(definition, filiation);
+    return {
+      ...official,
+      ...entry,
+      title: entry.title || official.title,
+      rules: entry.rules || official.rules,
+      summary: entry.summary || official.summary,
+      resource: entry.resource || official.resource,
+      recovery: entry.recovery || official.recovery,
+      costs: entry.costs || official.costs,
+      moves: entry.moves?.length ? entry.moves : official.moves,
+      officialSnapshot: entry.officialSnapshot || official.officialSnapshot,
+    };
+  });
   const official = FILIATION_SIGNATURES[filiation as keyof typeof FILIATION_SIGNATURES] || [];
   const existingSourceIds = new Set(existing.map((entry) => entry.sourceId));
   const missingOfficial = official
     .filter((definition) => !existingSourceIds.has(definition.id))
-    .map(makeOfficialState);
+    .map((definition) => makeOfficialState(definition, filiation));
 
-  if (missingOfficial.length === 0 && currentStates[filiation]) return currentStates;
+  if (missingOfficial.length === 0 && currentStates[filiation] && existing.every((entry, index) => entry === currentStates[filiation]?.[index])) return currentStates;
   return {
     ...currentStates,
     [filiation]: [...existing, ...missingOfficial],

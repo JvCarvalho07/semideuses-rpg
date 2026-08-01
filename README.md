@@ -25,6 +25,14 @@ páginas o conteúdo precisar, com escolha entre os formatos A3, A4 e A5.
 - Antecedentes, traços, aparência, história e notas.
 - Layout responsivo para computador e celular.
 
+## Gerar uma ficha com ChatGPT
+
+Use o [modelo JSON vazio](public/semideuses-chatgpt-template.json) como contrato e
+consulte o [schema V3](public/semideuses-chatgpt-schema.json). Peça ao ChatGPT
+para preencher os campos existentes sem remover `officialSnapshot`, `moves` ou
+`resource` das assinaturas. A ficha importa versões antigas e variantes de IA,
+mas mostra os ajustes feitos para você revisar.
+
 ## Apoie o projeto
 
 Se esta ficha ajudou a sua mesa, você pode

@@ -39,6 +39,34 @@ export type FiliationSignatureState = {
   notes: string;
   custom: boolean;
   extra?: Record<string, unknown>;
+  summary?: string;
+  resource?: SignatureResource;
+  recovery?: string;
+  costs?: string;
+  moves?: SignatureMove[];
+  officialSnapshot?: SignatureOfficialSnapshot;
+};
+
+export type SignatureResource = {
+  name: string;
+  current: number;
+  max: number;
+  unit: string;
+};
+
+export type SignatureMove = {
+  id: string;
+  name: string;
+  cost: string;
+  activation: string;
+  description: string;
+};
+
+export type SignatureOfficialSnapshot = {
+  sourceId: string;
+  title: string;
+  rules: string;
+  pdfPage: number;
 };
 
 export type ImportReport = {

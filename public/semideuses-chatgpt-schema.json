@@ -12,9 +12,24 @@
     "castingAttribute": { "enum": ["for", "des", "con", "int", "sab", "car"] }, "castingDcOverride": { "type": ["number", "null"] },
     "attributes": { "type": "object", "additionalProperties": { "type": "number" } }, "saveProficiencies": { "type": "array", "items": { "type": "string" } },
     "abilityGroups": { "type": "object", "required": ["abilities", "filiation", "path", "skills", "talents"], "additionalProperties": { "type": "array", "items": { "type": "object", "additionalProperties": true } } },
-    "filiationSignatures": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "object", "additionalProperties": true } } },
+    "filiationSignatures": { "type": "object", "additionalProperties": { "type": "array", "items": { "$ref": "#/$defs/filiationSignature" } } },
     "equipment": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
     "personality": { "type": "object", "additionalProperties": { "type": "string" } }
   },
-  "additionalProperties": true
+  "additionalProperties": true,
+  "$defs": {
+    "filiationSignature": {
+      "type": "object",
+      "required": ["id", "sourceId", "title", "rules", "selectedOptions", "notes", "custom"],
+      "properties": {
+        "id": { "type": "string" }, "sourceId": { "type": "string" }, "title": { "type": "string" }, "rules": { "type": "string" },
+        "summary": { "type": "string" }, "recovery": { "type": "string" }, "costs": { "type": "string" }, "notes": { "type": "string" }, "custom": { "type": "boolean" },
+        "selectedOptions": { "type": "object", "additionalProperties": { "type": "string" } },
+        "resource": { "type": "object", "required": ["name", "current", "max", "unit"], "properties": { "name": { "type": "string" }, "current": { "type": "number" }, "max": { "type": "number" }, "unit": { "type": "string" } }, "additionalProperties": true },
+        "moves": { "type": "array", "items": { "type": "object", "required": ["id", "name", "cost", "activation", "description"], "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "cost": { "type": "string" }, "activation": { "type": "string" }, "description": { "type": "string" } }, "additionalProperties": true } },
+        "officialSnapshot": { "type": "object", "properties": { "sourceId": { "type": "string" }, "title": { "type": "string" }, "rules": { "type": "string" }, "pdfPage": { "type": "integer" } }, "additionalProperties": true }
+      },
+      "additionalProperties": true
+    }
+  }
 }

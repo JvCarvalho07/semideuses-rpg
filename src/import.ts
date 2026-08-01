@@ -8,8 +8,10 @@ import {
   type Equipment,
   type FiliationSignatureState,
   type ImportReport,
+  type SignatureMove,
+  type SignatureResource,
 } from "./model";
-import { ensureFiliationSignatures } from "./filiationSignatures";
+import { ensureFiliationSignatures, makeOfficialState, signatureDefinition } from "./filiationSignatures";
 
 type Dict = Record<string, unknown>;
 const ATTRIBUTES: AttributeKey[] = ["for", "des", "con", "int", "sab", "car"];
@@ -65,15 +67,48 @@ function normalizeEquipment(rawValue: unknown, index: number, report: ImportRepo
   };
 }
 
+function normalizeResource(value: unknown, fallback: SignatureResource | undefined): SignatureResource | undefined {
+  if (value == null && !fallback) return undefined;
+  const raw = dict(value);
+  return {
+    name: str(raw.name, fallback?.name || "Recurso"),
+    current: Math.max(0, num(raw.current, fallback?.current || 0)),
+    max: Math.max(0, num(raw.max, fallback?.max || 0)),
+    unit: str(raw.unit, fallback?.unit || "cargas"),
+  };
+}
+
+function normalizeMoves(value: unknown, fallback: SignatureMove[] = []): SignatureMove[] {
+  const values = arr(value);
+  if (!values.length) return fallback;
+  return values.map((value, index) => {
+    const raw = dict(value);
+    return {
+      id: str(raw.id, `signature-move-${index + 1}`),
+      name: str(first(raw, "name", "title"), "Efeito ou manobra"),
+      cost: str(raw.cost),
+      activation: str(first(raw, "activation", "action"), "Conforme descrição"),
+      description: str(first(raw, "description", "rules")),
+    };
+  });
+}
+
 function normalizeSignatures(rawValue: unknown, filiation: string, report: ImportReport): CharacterSheet["filiationSignatures"] {
   const rawMap = dict(rawValue);
   const map = Object.fromEntries(Object.entries(rawMap).map(([name, values]) => [name, arr(values).map((value, index) => {
     const raw = dict(value);
+    const sourceId = str(raw.sourceId, str(raw.id, `signature-source-${index + 1}`));
+    const definition = signatureDefinition({ sourceId } as FiliationSignatureState);
+    const official = definition ? makeOfficialState(definition, filiation) : undefined;
+    const resource = normalizeResource(raw.resource, official?.resource);
     return {
-      id: str(raw.id, `signature-${index + 1}`), sourceId: str(raw.sourceId, str(raw.id, `signature-source-${index + 1}`)),
+      id: str(raw.id, `signature-${index + 1}`), sourceId,
       title: str(first(raw, "title", "name")), rules: str(first(raw, "rules", "description")),
       selectedOptions: dict(raw.selectedOptions) as Record<string, string>, notes: str(raw.notes), custom: bool(raw.custom),
-      extra: extras(raw, ["id", "sourceId", "title", "name", "rules", "description", "selectedOptions", "notes", "custom"]),
+      summary: str(raw.summary, official?.summary || str(first(raw, "rules", "description"))),
+      resource, recovery: str(raw.recovery), costs: str(raw.costs), moves: normalizeMoves(raw.moves ?? raw.effects, official?.moves),
+      officialSnapshot: dict(raw.officialSnapshot).sourceId ? dict(raw.officialSnapshot) as FiliationSignatureState["officialSnapshot"] : official?.officialSnapshot,
+      extra: extras(raw, ["id", "sourceId", "title", "name", "rules", "description", "selectedOptions", "notes", "custom", "summary", "resource", "recovery", "costs", "moves", "effects", "officialSnapshot"]),
     } satisfies FiliationSignatureState;
   })]));
   return filiation ? ensureFiliationSignatures(map, filiation) : map;
@@ -107,4 +142,3 @@ export function normalizeImportedSheet(candidate: unknown): { sheet: CharacterSh
   base.importReport = report;
   return { sheet: base, report, recognized };
 }
-

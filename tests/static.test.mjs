@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("build estático contém a ficha limpa e as ações principais", async () => {
-  const [html, model, app, css, readme, signatures, importer] = await Promise.all([
+  const [html, model, app, css, readme, signatures, importer, schema, template] = await Promise.all([
     readFile(new URL("../dist/index.html", import.meta.url), "utf8"),
     readFile(new URL("../src/model.ts", import.meta.url), "utf8"),
     readFile(new URL("../src/App.tsx", import.meta.url), "utf8"),
@@ -11,6 +11,8 @@ test("build estático contém a ficha limpa e as ações principais", async () =
     readFile(new URL("../README.md", import.meta.url), "utf8"),
     readFile(new URL("../src/filiationSignatures.ts", import.meta.url), "utf8"),
     readFile(new URL("../src/import.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/semideuses-chatgpt-schema.json", import.meta.url), "utf8"),
+    readFile(new URL("../public/semideuses-chatgpt-template.json", import.meta.url), "utf8"),
   ]);
 
   assert.match(html, /Semideuses RPG — Ficha Digital/);
@@ -42,8 +44,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /normalizeImportedSheet/);
   assert.match(app, /ensureFiliationSignatures/);
   assert.match(app, /FiliationSignatureSection/);
-  assert.match(app, /path-signature-pair/);
-  assert.match(app, /skills-filiation-pair/);
+  assert.match(app, /ability-column-left/);
+  assert.match(app, /ability-column-right/);
+  assert.match(app, /ability-print-flow/);
   assert.match(app, /Assinatura da filiação/);
   assert.match(app, /Caminho divino/);
   assert.match(app, /origin-options/);
@@ -71,6 +74,19 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(css, /\.ability-pair \{[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 800px\)[\s\S]*\.ability-pair \{ grid-template-columns: 1fr; \}/);
   assert.match(css, /\.signature-print/);
+  assert.match(css, /\.ability-categories\.is-desktop-stacks/);
+  assert.match(css, /\.ability-column \{/);
+  assert.match(app, /ability-column-left/);
+  assert.match(app, /ability-column-right/);
+  assert.match(css, /\.ability-print-flow/);
+  assert.match(css, /\.equipment-mode-filters/);
+  assert.match(app, /Restaurar oficial/);
+  assert.match(app, /Adicionar linha/);
+  assert.match(app, /equipmentMode/);
+  assert.match(importer, /officialSnapshot/);
+  assert.match(model, /SignatureMove/);
+  assert.deepEqual(JSON.parse(template).abilityGroups, { abilities: [], filiation: [], path: [], skills: [], talents: [] });
+  assert.ok(JSON.parse(schema).$defs.filiationSignature.properties.moves);
   assert.equal((signatures.match(/id: "[^"]+",\n\s+title:/g) || []).length, 26);
   assert.match(signatures, /zeus-tempestade-crescente/);
   assert.match(signatures, /ares-furia/);
