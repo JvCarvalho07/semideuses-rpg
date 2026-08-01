@@ -61,6 +61,11 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /function SignatureWorkspace/);
   assert.match(app, /createPortal/);
   assert.match(app, /Aumentar \$\{label\}/);
+  assert.match(app, /RESOURCE_ASSETS/);
+  assert.match(app, /resource-vitality\.webp/);
+  assert.match(app, /resource-mana\.webp/);
+  assert.match(app, /resource-divine\.webp/);
+  assert.match(app, /resource-panel-texture\.webp/);
   assert.match(app, /equipmentGroups/);
   assert.match(app, /ability-print-flow/);
   assert.match(app, /Assinatura da filiação/);
@@ -123,6 +128,21 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.doesNotMatch(signatures, /Héstia|Hestia/);
   assert.match(readme, /Semideuses RPG é uma criação de João Jota/);
   assert.doesNotMatch(readme, /Rodar localmente|Publicar no GitHub Pages/);
+});
+
+test("resource panel assets are present and optimized for the editor", async () => {
+  const filenames = [
+    "resource-panel-texture.webp",
+    "resource-vitality.webp",
+    "resource-mana.webp",
+    "resource-divine.webp",
+  ];
+
+  for (const filename of filenames) {
+    const asset = await readFile(new URL(`../public/assets/${filename}`, import.meta.url));
+    assert.ok(asset.byteLength > 1000, `${filename} should not be empty`);
+    assert.ok(asset.byteLength < 100_000, `${filename} should remain lightweight`);
+  }
 });
 
 test("the import regression fixture covers AI-shaped fields", async () => {

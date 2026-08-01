@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent } from "react";
+import type { CSSProperties, ChangeEvent } from "react";
 import { createPortal } from "react-dom";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -28,6 +28,12 @@ import { normalizeImportedSheet } from "./import";
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const EQUIPMENT_TYPES = ["Arma", "Armadura", "Escudo", "Ferramenta", "Acessório", "Relíquia", "Consumível", "Outro"];
+const RESOURCE_ASSETS = {
+  health: `${import.meta.env.BASE_URL}assets/resource-vitality.webp`,
+  mana: `${import.meta.env.BASE_URL}assets/resource-mana.webp`,
+  divine: `${import.meta.env.BASE_URL}assets/resource-divine.webp`,
+  texture: `${import.meta.env.BASE_URL}assets/resource-panel-texture.webp`,
+} as const;
 const ORIGIN_SUGGESTIONS = ["Semideus Grego", "Sátiro", "Ciclope", "Mortal Vidente", "Legado"];
 type PrintFormat = "A4" | "A3" | "A5";
 const LEGEND_CHOICES = [
@@ -104,6 +110,7 @@ function NumberControl({
   label,
   value,
   max,
+  iconSrc,
   onChange,
   onIncrease,
   onDecrease,
@@ -112,6 +119,7 @@ function NumberControl({
   label: string;
   value: number;
   max: number;
+  iconSrc?: string;
   onChange: (value: number) => void;
   onIncrease?: () => void;
   onDecrease?: () => void;
@@ -121,7 +129,10 @@ function NumberControl({
   const decrease = onDecrease || (() => onChange(Math.max(0, value - 1)));
   return (
     <div className="number-control">
-      <span>{label}</span>
+      <span className="number-label">
+        {iconSrc && <img className="resource-medallion" src={iconSrc} width={28} height={28} loading="lazy" decoding="async" alt="" />}
+        <span>{label}</span>
+      </span>
       <button type="button" onClick={decrease} aria-label={`Reduzir ${label}`}>−</button>
       <strong>{value}</strong>
       <small>/</small>
@@ -1275,23 +1286,23 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="combat-dashboard" id="combate">
+          <div className="combat-dashboard" id="combate" style={{ "--resource-texture": `url(${RESOURCE_ASSETS.texture})` } as CSSProperties}>
             <section className="vitals-block">
               <div className="vital-row">
-                <NumberControl label="PV" value={sheet.hp} max={sheet.hpMax} onChange={(value) => patch("hp", Math.min(Math.max(0, value), Math.max(0, sheet.hpMax)))} onIncrease={() => adjustHp(1)} onDecrease={() => adjustHp(-1)} onMaxChange={(value) => updateVitalMaximum("hp", "hpMax", value)} />
+                <NumberControl label="PV" value={sheet.hp} max={sheet.hpMax} iconSrc={RESOURCE_ASSETS.health} onChange={(value) => patch("hp", Math.min(Math.max(0, value), Math.max(0, sheet.hpMax)))} onIncrease={() => adjustHp(1)} onDecrease={() => adjustHp(-1)} onMaxChange={(value) => updateVitalMaximum("hp", "hpMax", value)} />
                 <label className="maximum-field">Máximo<input type="number" min={1} value={sheet.hpMax} onChange={(event) => patch("hpMax", Number(event.target.value))} /></label>
                 <ResourceBar label="PV" value={sheet.hp} max={sheet.hpMax} temp={sheet.hpTemp} color="var(--health)" kind="health" onChange={(value) => patch("hp", value)} />
                 <label className="temp-value">Temporário<input type="number" min={0} value={sheet.hpTemp} onChange={(event) => patch("hpTemp", Number(event.target.value))} /></label>
               </div>
               <div className="vital-row mana-row">
-                <NumberControl label="MP" value={sheet.mana} max={sheet.manaMax} onChange={(value) => patch("mana", Math.min(Math.max(0, value), Math.max(0, sheet.manaMax)))} onIncrease={() => adjustMana(1)} onDecrease={() => adjustMana(-1)} onMaxChange={(value) => updateVitalMaximum("mana", "manaMax", value)} />
+                <NumberControl label="MP" value={sheet.mana} max={sheet.manaMax} iconSrc={RESOURCE_ASSETS.mana} onChange={(value) => patch("mana", Math.min(Math.max(0, value), Math.max(0, sheet.manaMax)))} onIncrease={() => adjustMana(1)} onDecrease={() => adjustMana(-1)} onMaxChange={(value) => updateVitalMaximum("mana", "manaMax", value)} />
                 <label className="maximum-field">Máximo<input type="number" min={1} value={sheet.manaMax} onChange={(event) => patch("manaMax", Number(event.target.value))} /></label>
                 <ResourceBar label="MP" value={sheet.mana} max={sheet.manaMax} color="var(--mana)" kind="mana" onChange={(value) => patch("mana", value)} />
               </div>
             </section>
 
             <section className="divine-block">
-              <NumberControl label={filiation.resource} value={sheet.divineResource} max={filiation.max} onChange={(value) => patch("divineResource", value)} />
+              <NumberControl label={filiation.resource} value={sheet.divineResource} max={filiation.max} iconSrc={RESOURCE_ASSETS.divine} onChange={(value) => patch("divineResource", value)} />
               <ResourceBar value={sheet.divineResource} max={filiation.max} color="var(--deity)" />
               <div className="pips-line"><span>Favor divino</span><div>{[1, 2, 3, 4, 5].map((value) => <button key={value} type="button" aria-label={`Favor divino ${value}`} className={value <= sheet.favor ? "on" : ""} onClick={() => patch("favor", sheet.favor === value ? value - 1 : value)} />)}</div></div>
               <div className="pips-line"><span>Sustentação</span><div>{[1, 2].map((value) => <button key={value} type="button" aria-label={`Sustentação ${value}`} className={value <= sheet.sustain ? "on" : ""} onClick={() => patch("sustain", sheet.sustain === value ? value - 1 : value)} />)}</div><b>{sheet.sustain}/2</b></div>

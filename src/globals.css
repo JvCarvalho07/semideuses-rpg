@@ -2334,3 +2334,171 @@ footer a:hover { color: var(--deity-light); }
   .ability-print .print-meta { display: flex; flex-wrap: wrap; gap: 1mm 3mm; color: #6e6558; font-size: 6.5pt; }
   .ability-print .print-meta span { white-space: nowrap; }
 }
+
+/* Resource-panel art is intentionally restrained: generated assets support the
+   editor's hierarchy without turning the sheet into a promotional surface. */
+@media screen {
+  .vitals-block,
+  .divine-block {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .vitals-block {
+    background:
+      radial-gradient(circle at 8% 8%, color-mix(in srgb, var(--health) 12%, transparent), transparent 34%),
+      linear-gradient(135deg, color-mix(in srgb, var(--deity-light) 10%, #f6ecd9), #f6ecd9 62%, color-mix(in srgb, var(--health) 6%, #f6ecd9));
+    box-shadow: inset 0 4px 0 color-mix(in srgb, var(--health) 68%, var(--bronze));
+  }
+
+  .divine-block {
+    background:
+      radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--deity) 33%, transparent), transparent 54%),
+      linear-gradient(145deg, color-mix(in srgb, var(--deity-light) 16%, #fffaf0), color-mix(in srgb, var(--deity-secondary) 11%, #f4ead8));
+  }
+
+  .vitals-block::before,
+  .divine-block::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: var(--resource-texture);
+    background-size: 520px 520px;
+    background-position: center;
+    opacity: .09;
+    mix-blend-mode: multiply;
+  }
+
+  .divine-block::before {
+    opacity: .075;
+    mix-blend-mode: soft-light;
+  }
+
+  .vitals-block > *,
+  .divine-block > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .number-control > .number-label {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .number-label > span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .resource-medallion {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 2px rgba(40, 29, 16, .2));
+  }
+
+  .divine-block .resource-medallion {
+    flex-basis: 30px;
+    width: 30px;
+    height: 30px;
+  }
+
+  .meter {
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--bronze) 35%, var(--line));
+    background:
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, .2) 0 1px, transparent 1px 20%),
+      linear-gradient(180deg, color-mix(in srgb, var(--line) 55%, #e8ddca), #d5cab2);
+    box-shadow: inset 0 1px 2px rgba(55, 40, 20, .18), 0 2px 5px rgba(55, 40, 20, .1);
+  }
+
+  .meter > span {
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 0 8px color-mix(in srgb, var(--deity) 24%, transparent);
+  }
+
+  .meter > span::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(105deg, transparent 0 42%, rgba(255, 255, 255, .24) 50%, transparent 58%);
+    opacity: .32;
+  }
+
+  .meter-health { border-color: color-mix(in srgb, var(--health) 42%, var(--line)); }
+  .meter-mana { border-color: color-mix(in srgb, var(--mana) 42%, var(--line)); }
+  .divine-block .meter { border-color: color-mix(in srgb, var(--deity) 40%, var(--line)); }
+
+  .temp-meter > div {
+    border: 1px solid color-mix(in srgb, var(--temporary) 35%, var(--line));
+    border-radius: 999px;
+    background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .24) 0 1px, transparent 1px 20%), #ded2bb;
+    box-shadow: inset 0 1px 2px rgba(55, 40, 20, .14);
+  }
+
+  .temp-meter i {
+    border-radius: inherit;
+    box-shadow: 0 0 5px color-mix(in srgb, var(--temporary) 35%, transparent);
+  }
+
+  .pips-line button {
+    border-radius: 5px;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--paper-bright) 90%, var(--deity-light)), rgba(255, 255, 255, .36));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .65), 0 1px 0 rgba(55, 40, 20, .14);
+    transition: transform .16s ease, background .16s ease, box-shadow .16s ease, border-color .16s ease;
+  }
+
+  .pips-line button:hover,
+  .pips-line button:focus-visible {
+    transform: translateY(-1px);
+    border-color: var(--deity);
+    outline: 2px solid color-mix(in srgb, var(--deity) 54%, transparent);
+    outline-offset: 2px;
+  }
+
+  .pips-line button.on {
+    background: linear-gradient(145deg, var(--deity-light), var(--deity));
+    box-shadow: inset 0 0 0 3px var(--paper-bright), 0 0 0 1px var(--deity);
+  }
+
+  @media screen and (min-width: 1051px) {
+    .vital-row {
+      grid-template-columns: minmax(236px, 250px) minmax(120px, 1fr) 88px;
+    }
+  }
+
+  @media screen and (max-width: 800px) {
+    .resource-medallion {
+      flex-basis: 26px;
+      width: 26px;
+      height: 26px;
+    }
+
+    .number-control > .number-label { gap: 4px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .meter > span,
+    .pips-line button,
+    .number-control button { transition: none; }
+    .meter > span::after { display: none; }
+  }
+}
+
+@media print {
+  .vitals-block::before,
+  .divine-block::before,
+  .resource-medallion { display: none !important; }
+}
