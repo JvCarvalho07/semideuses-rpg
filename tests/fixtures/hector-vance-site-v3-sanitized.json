@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "name": "Personagem de teste",
+  "filiation": "Ares",
+  "abilityGroups": { "abilities": [{ "id": "a1", "title": "Fúria", "rules": "Teste", "action": "Passiva" }], "filiation": [], "path": [], "skills": [], "talents": [] },
+  "equipment": [{ "id": "e1", "title": "Item sem tipo", "qty": 1, "rules": "Teste" }],
+  "attributes": { "for": 12 },
+  "personality": {},
+  "filiationSignatures": { "Ares": [] }
+}

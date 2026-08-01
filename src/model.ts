@@ -12,6 +12,8 @@ export type Ability = {
   duration: string;
   recharge: string;
   description: string;
+  notes?: string;
+  extra?: Record<string, unknown>;
 };
 
 export type Equipment = {
@@ -25,6 +27,7 @@ export type Equipment = {
   damage: string;
   properties: string;
   notes: string;
+  extra?: Record<string, unknown>;
 };
 
 export type FiliationSignatureState = {
@@ -35,6 +38,12 @@ export type FiliationSignatureState = {
   selectedOptions: Record<string, string>;
   notes: string;
   custom: boolean;
+  extra?: Record<string, unknown>;
+};
+
+export type ImportReport = {
+  adjustments: string[];
+  unknownFields: string[];
 };
 
 export type CharacterSheet = {
@@ -80,6 +89,7 @@ export type CharacterSheet = {
     history: string;
     notes: string;
   };
+  importReport?: ImportReport;
 };
 
 export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {

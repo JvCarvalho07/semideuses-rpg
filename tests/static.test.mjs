@@ -3,13 +3,14 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("build estático contém a ficha limpa e as ações principais", async () => {
-  const [html, model, app, css, readme, signatures] = await Promise.all([
+  const [html, model, app, css, readme, signatures, importer] = await Promise.all([
     readFile(new URL("../dist/index.html", import.meta.url), "utf8"),
     readFile(new URL("../src/model.ts", import.meta.url), "utf8"),
     readFile(new URL("../src/App.tsx", import.meta.url), "utf8"),
     readFile(new URL("../src/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../README.md", import.meta.url), "utf8"),
     readFile(new URL("../src/filiationSignatures.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/import.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(html, /Semideuses RPG — Ficha Digital/);
@@ -38,7 +39,7 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /Testes de resistência/);
   assert.match(app, /Adicionar equipamento/);
   assert.match(app, /normalizeSheet/);
-  assert.match(app, /parsed\.version === 2 \|\| parsed\.version === 3/);
+  assert.match(app, /normalizeImportedSheet/);
   assert.match(app, /ensureFiliationSignatures/);
   assert.match(app, /FiliationSignatureSection/);
   assert.match(app, /path-signature-pair/);
@@ -46,12 +47,12 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /Assinatura da filiação/);
   assert.match(app, /Caminho divino/);
   assert.match(app, /origin-options/);
-  assert.match(app, /legacyRace/);
+  assert.match(importer, /legacyOrigin/);
   assert.doesNotMatch(app, /<span>Raça<\/span>/);
   assert.match(app, /Mortal Vidente/);
   assert.match(app, /O que restará quando a aventura terminar/);
   assert.match(app, /Ascensão Menor/);
-  assert.match(app, /legacyLegendEntries/);
+  assert.match(importer, /legacyLegendEntries/);
   assert.match(app, /castingAttackBonus = castingModifier \+ prof/);
   assert.match(app, /automaticCastingDc = 8 \+ castingModifier \+ prof/);
   assert.match(app, /CD das habilidades/);
@@ -80,4 +81,13 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.doesNotMatch(signatures, /Héstia|Hestia/);
   assert.match(readme, /Semideuses RPG é uma criação de João Jota/);
   assert.doesNotMatch(readme, /Rodar localmente|Publicar no GitHub Pages/);
+});
+
+test("the import regression fixture covers AI-shaped fields", async () => {
+  const fixture = JSON.parse(await readFile(new URL("./fixtures/hector-vance-site-v3-sanitized.json", import.meta.url), "utf8"));
+  assert.equal(fixture.abilityGroups.abilities[0].name, undefined);
+  assert.equal(fixture.equipment[0].type, undefined);
+  const app = await readFile(new URL("../src/App.tsx", import.meta.url), "utf8");
+  assert.match(app, /normalizeImportedSheet/);
+  assert.match(app, /\(item\.type \|\| "Outro"\)\.slice/);
 });

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jvcarvalho07.github.io/semideuses-rpg/semideuses-chatgpt-schema.json",
+  "title": "Semideuses RPG V3",
+  "type": "object",
+  "required": ["version", "name", "filiation", "abilityGroups", "equipment", "personality"],
+  "properties": {
+    "version": { "const": 3 }, "avatarDataUrl": { "type": "string" }, "name": { "type": "string" },
+    "legendDestiny": { "type": "string" }, "filiation": { "type": "string" }, "pathName": { "type": "string" }, "origin": { "type": "string" },
+    "level": { "type": "integer", "minimum": 1 }, "hp": { "type": "number" }, "hpMax": { "type": "number" }, "hpTemp": { "type": "number" },
+    "mana": { "type": "number" }, "manaMax": { "type": "number" }, "divineResource": { "type": "number" }, "favor": { "type": "integer", "minimum": 0, "maximum": 5 },
+    "castingAttribute": { "enum": ["for", "des", "con", "int", "sab", "car"] }, "castingDcOverride": { "type": ["number", "null"] },
+    "attributes": { "type": "object", "additionalProperties": { "type": "number" } }, "saveProficiencies": { "type": "array", "items": { "type": "string" } },
+    "abilityGroups": { "type": "object", "required": ["abilities", "filiation", "path", "skills", "talents"], "additionalProperties": { "type": "array", "items": { "type": "object", "additionalProperties": true } } },
+    "filiationSignatures": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "object", "additionalProperties": true } } },
+    "equipment": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+    "personality": { "type": "object", "additionalProperties": { "type": "string" } }
+  },
+  "additionalProperties": true
+}

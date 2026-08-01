@@ -21,6 +21,7 @@ import {
   ensureFiliationSignatures,
   signatureDefinition,
 } from "./filiationSignatures";
+import { normalizeImportedSheet } from "./import";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -390,7 +391,7 @@ function EquipmentEditor({
   return (
     <details className={`equipment-item ${item.equipped ? "is-equipped" : ""}`}>
       <summary>
-        <span className="equipment-symbol">{item.type.slice(0, 2).toUpperCase()}</span>
+        <span className="equipment-symbol">{(item.type || "Outro").slice(0, 2).toUpperCase()}</span>
         <span><strong>{item.name || "Novo equipamento"}</strong><small>{item.type} · quantidade {item.quantity}</small></span>
         {item.equipped && <b>Equipado</b>}
         <span className="disclosure">+</span>
@@ -411,65 +412,15 @@ function EquipmentEditor({
   );
 }
 
-function normalizeSignatureMap(candidate: Partial<CharacterSheet>) {
-  const rawMap = candidate.filiationSignatures && typeof candidate.filiationSignatures === "object"
-    ? candidate.filiationSignatures
-    : {};
-  const normalized = Object.fromEntries(
-    Object.entries(rawMap).map(([filiationName, entries]) => [
-      filiationName,
-      Array.isArray(entries)
-        ? entries.map((entry) => ({
-          id: entry.id || makeId("signature"),
-          sourceId: entry.sourceId || entry.id || makeId("signature-source"),
-          title: entry.title || "",
-          rules: entry.rules || "",
-          selectedOptions: entry.selectedOptions && typeof entry.selectedOptions === "object"
-            ? entry.selectedOptions
-            : {},
-          notes: entry.notes || "",
-          custom: Boolean(entry.custom),
-        }))
-        : [],
-    ]),
-  );
-  return candidate.filiation
-    ? ensureFiliationSignatures(normalized, candidate.filiation)
-    : normalized;
-}
-
-function normalizeSheet(candidate: CharacterSheet): CharacterSheet {
-  const { race: legacyRace, ...sheetWithoutLegacyRace } = candidate as CharacterSheet & { race?: string };
-  const rawGroups = candidate.abilityGroups as Partial<Record<AbilityCategory | "legend", Ability[]>>;
-  const legacyLegendEntries = candidate.legacyLegendEntries?.length
-    ? candidate.legacyLegendEntries
-    : rawGroups.legend;
-  return {
-    ...sheetWithoutLegacyRace,
-    version: 3,
-    avatarDataUrl: candidate.avatarDataUrl || "",
-    origin: candidate.origin || legacyRace || "",
-    legendDestiny: candidate.legendDestiny || "",
-    legacyLegendEntries: legacyLegendEntries?.length ? legacyLegendEntries : undefined,
-    castingDcOverride: Number.isFinite(candidate.castingDcOverride)
-      ? Number(candidate.castingDcOverride)
-      : null,
-    dracmas: Math.max(0, Number(candidate.dracmas ?? 0)),
-    filiationSignatures: normalizeSignatureMap(candidate),
-    abilityGroups: {
-      abilities: rawGroups.abilities || [],
-      filiation: rawGroups.filiation || [],
-      path: rawGroups.path || [],
-      skills: rawGroups.skills || [],
-      talents: rawGroups.talents || [],
-    },
-  };
+function normalizeSheet(candidate: unknown): CharacterSheet {
+  return normalizeImportedSheet(candidate).sheet;
 }
 
 export default function Home() {
   const [sheet, setSheet] = useState<CharacterSheet>(() => ({ ...INITIAL_SHEET }));
   const [hydrated, setHydrated] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [importNotice, setImportNotice] = useState<string[]>([]);
   const [equipmentFilter, setEquipmentFilter] = useState("Todos");
   const [legendOpen, setLegendOpen] = useState(false);
   const [printFormat, setPrintFormat] = useState<PrintFormat>(initialPrintFormat);
@@ -510,8 +461,8 @@ export default function Home() {
       return;
     }
     try {
-      const parsed = JSON.parse(stored) as CharacterSheet;
-      if (parsed.version === 2 || parsed.version === 3) setSheet(normalizeSheet(parsed));
+      const result = normalizeImportedSheet(JSON.parse(stored));
+      if (result.recognized) setSheet(result.sheet);
     } catch {
       localStorage.removeItem("semideuses-sheet-v3");
     } finally {
@@ -638,9 +589,10 @@ export default function Home() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const imported = JSON.parse(String(reader.result)) as CharacterSheet;
-        if (!imported.attributes || !imported.abilityGroups || !imported.equipment || !imported.personality) throw new Error("Formato inválido");
-        setSheet(normalizeSheet(imported));
+        const result = normalizeImportedSheet(JSON.parse(String(reader.result)));
+        if (!result.recognized) throw new Error("Formato inválido");
+        setSheet(result.sheet);
+        setImportNotice([...result.report.adjustments, ...(result.report.unknownFields.length ? [`Campos desconhecidos preservados: ${result.report.unknownFields.join(", ")}`] : [])]);
       } catch {
         window.alert("Este arquivo não contém uma ficha compatível.");
       }
@@ -698,6 +650,13 @@ export default function Home() {
           <input ref={importRef} type="file" accept=".json,application/json" hidden onChange={importJson} />
         </div>
       </header>
+      {importNotice.length > 0 && (
+        <aside className="import-notice" role="status">
+          <strong>Importação ajustada</strong>
+          <span>{importNotice.slice(0, 3).join(" · ")}</span>
+          <button type="button" onClick={() => setImportNotice([])} aria-label="Fechar aviso">×</button>
+        </aside>
+      )}
 
       <div className="site-content" id="inicio">
         <section className="hero-shell" data-deity-mark={filiation.mark}>
@@ -712,7 +671,7 @@ export default function Home() {
             >
               {sheet.avatarDataUrl
                 ? <img src={sheet.avatarDataUrl} alt={`Retrato de ${sheet.name || "personagem"}`} />
-                : <span aria-hidden="true">{sheet.name.slice(0, 1) || "Σ"}</span>}
+                : <span aria-hidden="true">{(sheet.name || "").slice(0, 1) || "Σ"}</span>}
               <label className="avatar-upload">
                 <span>{sheet.avatarDataUrl ? "Trocar" : "Foto"}</span>
                 <input ref={avatarInputRef} aria-label="Selecionar foto do personagem" type="file" accept="image/*" onChange={(event) => void setAvatar(event.target.files?.[0])} />
