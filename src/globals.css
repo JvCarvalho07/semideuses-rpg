@@ -1884,7 +1884,6 @@ footer a:hover { color: var(--deity-light); }
     margin: 3mm 0 0;
     grid-template-columns: repeat(12, minmax(0, 1fr));
     break-inside: avoid;
-    break-after: page;
   }
   .attributes-column { grid-column: span 4; padding: 3.5mm 4mm; }
   .skills-column { grid-column: span 8; padding: 3.5mm 4mm; }
@@ -2214,4 +2213,124 @@ footer a:hover { color: var(--deity-light); }
   .combat-facts .editable-fact small { display: block !important; }
   .equipment-actions .human-money-field { display: none !important; }
   .story-section { background-image: none !important; }
+}
+
+/* Focused correction: keep resource steppers and signature disclosure controls
+   on an intentional, keyboard-friendly line at every editor width. */
+@media screen {
+  .number-control {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) 36px 46px auto minmax(32px, 36px) 36px;
+    gap: 5px;
+  }
+  .divine-block .number-control { grid-template-columns: minmax(0, 1fr) 36px 40px auto minmax(30px, 36px) 36px; }
+  .number-control > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .number-control button {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--paper-bright) 70%, var(--deity-light));
+    border: 1px solid color-mix(in srgb, var(--deity) 52%, var(--line));
+    border-radius: 50%;
+    font-size: 18px;
+    line-height: 1;
+    transition: transform .16s ease, background .16s ease, border-color .16s ease;
+  }
+  .number-control button:hover { transform: translateY(-1px); background: var(--deity-light); border-color: var(--deity); }
+  .number-control button:active { transform: translateY(1px); }
+  .number-control button:focus-visible { outline: 2px solid var(--deity); outline-offset: 2px; }
+  .number-control strong { line-height: 1; }
+  .number-max { width: 36px; max-width: 36px; }
+
+  .signature-disclosure > summary.signature-summary {
+    min-width: 0;
+    grid-template-columns: 36px minmax(0, 1fr) max-content minmax(116px, max-content);
+    gap: 11px;
+    padding-inline: 14px;
+  }
+  .signature-summary > span:nth-child(2) { min-width: 0; overflow: hidden; }
+  .signature-summary > span:nth-child(2) strong,
+  .signature-summary > span:nth-child(2) small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .signature-summary-meta { min-width: max-content; white-space: nowrap; text-align: right; }
+  .signature-summary .disclosure-label {
+    min-width: 116px;
+    min-height: 36px;
+    padding: 8px 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--deity-deep);
+    background: color-mix(in srgb, var(--paper-bright) 82%, var(--deity-light));
+    border: 1px solid color-mix(in srgb, var(--deity) 48%, var(--line));
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 850;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .signature-summary:hover .disclosure-label { color: var(--ink); background: var(--deity-light); border-color: var(--deity); }
+  .signature-summary:focus-visible { outline: 2px solid var(--deity); outline-offset: -3px; }
+}
+
+@media screen and (max-width: 800px) {
+  .number-control {
+    grid-template-columns: minmax(0, 1fr) 34px 40px auto minmax(30px, 34px) 34px;
+    gap: 4px;
+  }
+  .number-control button { width: 34px; min-width: 34px; height: 34px; }
+  .number-max { width: 34px; max-width: 34px; }
+  .divine-block .number-control { grid-template-columns: minmax(0, 1fr) 34px 40px auto minmax(30px, 34px) 34px; }
+  .signature-disclosure > summary.signature-summary {
+    grid-template-columns: 34px minmax(0, 1fr) max-content 34px;
+    gap: 8px;
+    padding-inline: 10px;
+  }
+  .signature-summary .disclosure-label {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    font-size: 0;
+  }
+  .signature-summary .disclosure-label::before { content: "+"; font-size: 20px; font-weight: 500; line-height: 1; }
+  .signature-summary .disclosure-label[data-open="true"]::before { content: "−"; }
+}
+
+@media print {
+  .stats-layout { break-after: auto !important; }
+  .abilities-section {
+    break-before: auto !important;
+    break-inside: auto !important;
+  }
+  .abilities-section > .section-toolbar { break-after: avoid-page; }
+  .ability-print-flow .category-filiation,
+  .ability-print-flow .category-abilities { break-before: auto !important; }
+  .ability-print-flow .ability-category { break-inside: auto; }
+  .ability-print-flow .ability-unit,
+  .ability-print-flow .signature-card { break-inside: avoid; }
+  .ability-print-flow .category-heading { break-after: avoid-page; }
+  .ability-print-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4mm;
+    margin-bottom: 1mm;
+    padding-bottom: 1mm;
+    border-bottom: 1px solid #d8cebd;
+  }
+  .ability-print-name {
+    display: block !important;
+    color: #211f1a;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 13pt;
+    line-height: 1.05;
+  }
+  .ability-print-heading > span { color: #6d6558; font-size: 6.5pt; font-weight: 800; text-align: right; }
+  .ability-print .print-meta { display: flex; flex-wrap: wrap; gap: 1mm 3mm; color: #6e6558; font-size: 6.5pt; }
+  .ability-print .print-meta span { white-space: nowrap; }
 }

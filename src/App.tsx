@@ -61,6 +61,34 @@ function signed(value: number) {
   return value >= 0 ? `+${value}` : String(value);
 }
 
+function normalizedLabel(value: string) {
+  return value.trim().normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase();
+}
+
+function formatCostValue(value: string | undefined, resourceName?: string) {
+  const raw = value?.trim() || "";
+  if (!raw) return "";
+  const normalized = normalizedLabel(raw).replace(/[—–]/g, "-");
+  if (normalized === "-" || normalized === "sem custo" || /^0(?:[.,]0)?$/.test(normalized)) return "Sem custo";
+  if (resourceName && /^\d+(?:[.,]\d+)?$/.test(raw)) return `${raw} ${resourceName}`;
+  return raw;
+}
+
+function formatCostLabel(value: string | undefined, resourceName?: string) {
+  const formatted = formatCostValue(value, resourceName);
+  if (!formatted) return "";
+  return formatted === "Sem custo" ? formatted : `Custo: ${formatted}`;
+}
+
+function formatActivationLabel(value: string | undefined) {
+  const raw = value?.trim() || "";
+  if (!raw) return "";
+  const normalized = normalizedLabel(raw);
+  return normalized.includes("conforme descricao") || normalized.includes("passiva") || normalized.includes("sempre")
+    ? `Ativação: ${raw}`
+    : `Ação: ${raw}`;
+}
+
 function proficiency(level: number) {
   return 2 + Math.floor((Math.max(1, level) - 1) / 4);
 }
@@ -259,7 +287,7 @@ function AbilityReadOnly({ ability }: { ability: Ability }) {
   const fields = [
     ["Nível", ability.level || 1],
     ["Rank", ability.rank || "—"],
-    ["Custo", ability.cost || "Sem custo"],
+    ["Custo", formatCostValue(ability.cost) || "—"],
     ["Ação", ability.activation || "Não definida"],
     ["Alcance", ability.range || "—"],
     ["Duração", ability.duration || "—"],
@@ -278,11 +306,13 @@ function AbilityReadOnly({ ability }: { ability: Ability }) {
 
 function AbilityCard({
   ability,
+  category,
   onUpdate,
   onRemove,
   forceOpen,
 }: {
   ability: Ability;
+  category: AbilityCategory;
   onUpdate: (ability: Ability) => void;
   onRemove: () => void;
   forceOpen?: boolean;
@@ -303,7 +333,7 @@ function AbilityCard({
           <strong>{ability.name || "Nova habilidade"}</strong>
           <small>Nível {ability.level || 1} · {ability.activation || "Ativação não definida"}</small>
         </button>
-        <span className="ability-cost">{ability.cost || "Sem custo"}</span>
+        <span className="ability-cost">{formatCostValue(ability.cost) || "—"}</span>
         <div className="ability-card-actions">
           <button type="button" className="ability-details-toggle" onClick={() => setMode(mode === "details" ? "compact" : "details")} aria-expanded={mode === "details"}>{mode === "details" ? "Fechar" : "Ver detalhes"}</button>
           <button type="button" className="ability-edit-link" onClick={() => setMode("edit")}>Editar</button>
@@ -333,10 +363,16 @@ function AbilityCard({
         </div>
       )}
       <div className="ability-print print-only">
+        <header className="ability-print-heading">
+          <strong className="ability-print-name">{ability.name || "Habilidade sem nome"}</strong>
+          <span>{ABILITY_META[category].title} · Nível {ability.level || 1}{ability.rank ? ` · Rank ${ability.rank}` : ""}</span>
+        </header>
         <div className="print-meta">
-          {ability.range && <span>Alcance {ability.range}</span>}
-          {ability.duration && <span>Duração {ability.duration}</span>}
-          {ability.recharge && <span>Recarga {ability.recharge}</span>}
+          {formatCostLabel(ability.cost) && <span>{formatCostLabel(ability.cost)}</span>}
+          {formatActivationLabel(ability.activation) && <span>{formatActivationLabel(ability.activation)}</span>}
+          {ability.range && <span>Alcance: {ability.range}</span>}
+          {ability.duration && <span>Duração: {ability.duration}</span>}
+          {ability.recharge && <span>Recarga: {ability.recharge}</span>}
         </div>
         {ability.description && <p>{ability.description}</p>}
         {ability.notes && <p><strong>Observações:</strong> {ability.notes}</p>}
@@ -402,6 +438,7 @@ function AbilitySection({
           <AbilityCard
             key={item.id}
             ability={item}
+            category={category}
             forceOpen={expandAll}
             onUpdate={(updated) => onChange(items.map((current) => current.id === item.id ? updated : current))}
             onRemove={() => onChange(items.filter((current) => current.id !== item.id))}
@@ -531,7 +568,7 @@ function FiliationSignatureSection({
                 {item.resource && <dl><div><dt>Recurso</dt><dd>{item.resource.name} {item.resource.current}/{item.resource.max} {item.resource.unit}</dd></div></dl>}
                 {item.recovery && <p><strong>Ganho e recuperação:</strong> {item.recovery}</p>}
                 {item.costs && <p><strong>Custos:</strong> {item.costs}</p>}
-                {item.moves?.length ? <dl>{item.moves.map((move) => <div key={move.id}><dt>{move.name}</dt><dd>{[move.cost, move.activation, move.description].filter(Boolean).join(" · ")}</dd></div>)}</dl> : null}
+                {item.moves?.length ? <dl>{item.moves.map((move) => <div key={move.id}><dt>{move.name}</dt><dd>{[formatCostLabel(move.cost, resource?.name), formatActivationLabel(move.activation), move.description].filter(Boolean).join(" · ")}</dd></div>)}</dl> : null}
                 {choices.length > 0 && (
                   <dl>
                     {choices.map((choice) => {
@@ -596,7 +633,7 @@ function SignatureReadOnly({
         <div className="signature-subheading"><strong>Efeitos e manobras</strong><span>{moves.length}</span></div>
         {moves.length ? moves.map((move) => (
           <article key={move.id}>
-            <div><strong>{move.name || "Efeito sem nome"}</strong><span>{[move.cost, move.activation].filter(Boolean).join(" · ") || "Sem custo ou ação definida"}</span></div>
+            <div><strong>{move.name || "Efeito sem nome"}</strong><span>{[formatCostLabel(move.cost, resource?.name), formatActivationLabel(move.activation)].filter(Boolean).join(" · ")}</span></div>
             <p>{move.description || "Sem descrição."}</p>
           </article>
         )) : <p className="empty-state">Nenhum efeito estruturado. A referência oficial continua disponível abaixo.</p>}
@@ -680,6 +717,55 @@ function SignatureEditor({
   ), document.body);
 }
 
+function SignatureCard({
+  item,
+  filiationName,
+  onEdit,
+  onRemove,
+}: {
+  item: FiliationSignatureState;
+  filiationName: string;
+  onEdit: () => void;
+  onRemove?: () => void;
+}) {
+  const [open, setOpen] = useState(Boolean(item.custom));
+  const definition = signatureDefinition(item);
+  const resource = item.resource;
+  const moves = item.moves || [];
+  const panelId = `signature-details-${item.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  return (
+    <article className={`signature-card ${item.custom ? "is-custom" : "is-official"}`}>
+      <details className="signature-disclosure" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+        <summary
+          className="signature-summary"
+          aria-controls={panelId}
+          aria-expanded={open}
+          aria-label={open ? "Fechar detalhes da assinatura" : "Ver detalhes da assinatura"}
+        >
+          <span aria-hidden="true">{item.custom ? "✦" : "Σ"}</span>
+          <span><strong>{item.title || "Assinatura sem nome"}</strong><small>{item.custom ? "Personalizada" : filiationName}{resource ? ` · ${resource.name} ${resource.current}/${resource.max}` : ""}</small></span>
+          <span className="signature-summary-meta">{moves.length} {moves.length === 1 ? "efeito" : "efeitos"}</span>
+          <span className="disclosure-label" data-open={open}>{open ? "Fechar detalhes" : "Ver detalhes"}</span>
+        </summary>
+        <div id={panelId}>
+          <SignatureReadOnly item={item} filiationName={filiationName} onEdit={onEdit} onRemove={onRemove} />
+        </div>
+      </details>
+      <div className="signature-print print-only">
+        <header><strong>{item.title || "Assinatura personalizada"}</strong><span>{item.custom ? "Personalizada" : filiationName}</span></header>
+        {item.officialSnapshot?.rules && <p><strong>Referência oficial:</strong> {item.officialSnapshot.rules}</p>}
+        {item.summary && <p><strong>Resumo:</strong> {item.summary}</p>}
+        {resource && <dl><div><dt>Recurso</dt><dd>{resource.name} {resource.current}/{resource.max} {resource.unit}</dd></div></dl>}
+        {item.recovery && <p><strong>Ganho e recuperação:</strong> {item.recovery}</p>}
+        {item.costs && <p><strong>Custos:</strong> {item.costs}</p>}
+        {moves.length ? <dl>{moves.map((move) => <div key={move.id}><dt>{move.name}</dt><dd>{[formatCostLabel(move.cost, resource?.name), formatActivationLabel(move.activation), move.description].filter(Boolean).join(" · ")}</dd></div>)}</dl> : null}
+        {definition?.choices?.length ? <dl>{definition.choices.map((choice) => { const selected = item.selectedOptions[choice.id] || choice.defaultValue; return <div key={choice.id}><dt>{choice.label}</dt><dd>{choice.options.find((option) => option.value === selected)?.label || selected}</dd></div>; })}</dl> : null}
+        {item.notes && <p><strong>Notas:</strong> {item.notes}</p>}
+      </div>
+    </article>
+  );
+}
+
 function SignatureWorkspace({
   filiationName,
   items,
@@ -715,18 +801,13 @@ function SignatureWorkspace({
       <div className="signature-list">
         {!filiationName && <p className="empty-state">Escolha uma filiação para revelar sua assinatura.</p>}
         {filiationName && !items.length && <p className="empty-state">Nenhuma assinatura registrada.</p>}
-        {items.map((item) => {
-          const definition = signatureDefinition(item);
-          const resource = item.resource;
-          const moves = item.moves || [];
-          return <article className={`signature-card ${item.custom ? "is-custom" : "is-official"}`} key={item.id}>
-            <details className="signature-disclosure">
-              <summary className="signature-summary"><span aria-hidden="true">{item.custom ? "✦" : "Σ"}</span><span><strong>{item.title || "Assinatura sem nome"}</strong><small>{item.custom ? "Personalizada" : filiationName}{resource ? ` · ${resource.name} ${resource.current}/${resource.max}` : ""}</small></span><span className="signature-summary-meta">{moves.length} {moves.length === 1 ? "efeito" : "efeitos"}</span><span className="disclosure-label">Ver detalhes</span></summary>
-              <SignatureReadOnly item={item} filiationName={filiationName} onEdit={() => setEditingId(item.id)} onRemove={item.custom ? () => { if (window.confirm("Remover esta assinatura personalizada?")) onChange(items.filter((current) => current.id !== item.id)); } : undefined} />
-            </details>
-            <div className="signature-print print-only"><header><strong>{item.title || "Assinatura personalizada"}</strong><span>{item.custom ? "Personalizada" : filiationName}</span></header>{item.officialSnapshot?.rules && <p><strong>Referência oficial:</strong> {item.officialSnapshot.rules}</p>}{item.summary && <p><strong>Resumo:</strong> {item.summary}</p>}{item.resource && <dl><div><dt>Recurso</dt><dd>{item.resource.name} {item.resource.current}/{item.resource.max} {item.resource.unit}</dd></div></dl>}{item.recovery && <p><strong>Ganho e recuperação:</strong> {item.recovery}</p>}{item.costs && <p><strong>Custos:</strong> {item.costs}</p>}{moves.length ? <dl>{moves.map((move) => <div key={move.id}><dt>{move.name}</dt><dd>{[move.cost, move.activation, move.description].filter(Boolean).join(" · ")}</dd></div>)}</dl> : null}{definition?.choices?.length ? <dl>{definition.choices.map((choice) => { const selected = item.selectedOptions[choice.id] || choice.defaultValue; return <div key={choice.id}><dt>{choice.label}</dt><dd>{choice.options.find((option) => option.value === selected)?.label || selected}</dd></div>; })}</dl> : null}{item.notes && <p><strong>Notas:</strong> {item.notes}</p>}</div>
-          </article>;
-        })}
+        {items.map((item) => <SignatureCard
+          key={item.id}
+          item={item}
+          filiationName={filiationName}
+          onEdit={() => setEditingId(item.id)}
+          onRemove={item.custom ? () => { if (window.confirm("Remover esta assinatura personalizada?")) onChange(items.filter((current) => current.id !== item.id)); } : undefined}
+        />)}
       </div>
       {editingItem && <SignatureEditor item={editingItem} filiationName={filiationName} onSave={save} onCancel={() => setEditingId(null)} onRestore={restore} />}
     </section>

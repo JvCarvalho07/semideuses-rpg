@@ -53,6 +53,11 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /ability-column-left/);
   assert.match(app, /ability-column-right/);
   assert.match(app, /function AbilityCard/);
+  assert.match(app, /formatCostLabel/);
+  assert.match(app, /formatActivationLabel/);
+  assert.match(app, /function SignatureCard/);
+  assert.match(app, /aria-controls=\{panelId\}/);
+  assert.match(app, /aria-expanded=\{open\}/);
   assert.match(app, /function SignatureWorkspace/);
   assert.match(app, /createPortal/);
   assert.match(app, /Aumentar \$\{label\}/);
@@ -78,7 +83,8 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(css, /@page \{ size: A4 portrait;/);
   assert.match(css, /html\[data-print-size="A5"\] \.site-content/);
   assert.match(css, /zoom: \.7;/);
-  assert.match(css, /\.stats-layout \{[\s\S]*break-inside: avoid;[\s\S]*break-after: page;/);
+  assert.match(css, /\.stats-layout \{[\s\S]*break-inside: avoid;/);
+  assert.doesNotMatch(css, /break-after:\s*page/);
   assert.match(css, /\.hero-shell \{ break-after: avoid-page; \}/);
   assert.match(css, /@media \(max-width: 580px\)/);
   assert.match(css, /prefers-reduced-motion/);
@@ -90,6 +96,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /ability-column-left/);
   assert.match(app, /ability-column-right/);
   assert.match(css, /\.ability-print-flow/);
+  assert.match(css, /\.ability-print-heading/);
+  assert.match(css, /\.ability-print-name/);
+  assert.match(css, /\.divine-block \.number-control \{ grid-template-columns: minmax\(0, 1fr\) 36px 40px auto minmax\(30px, 36px\) 36px; \}/);
   assert.match(css, /\.equipment-mode-filters/);
   assert.match(css, /\.signature-editor-layer/);
   assert.match(css, /\.number-max-print/);
