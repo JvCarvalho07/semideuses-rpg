@@ -1904,7 +1904,8 @@ footer a:hover { color: var(--deity-light); }
   .equipment-section,
   .story-section {
     padding: 6mm;
-    break-before: page;
+    /* Sections flow naturally; only compact cards opt out of fragmentation. */
+    break-before: auto;
   }
   .abilities-section {
     margin-top: 0;
@@ -2040,6 +2041,106 @@ footer a:hover { color: var(--deity-light); }
 }
 
 /* Final editor pass: dense, independent bands with explicit read and edit states. */
+@media screen {
+  .section-heading-medallion,
+  .section-medallion,
+  .group-medallion,
+  .narrative-label img,
+  .filiation-control img,
+  .currency-medallion,
+  .equipment-symbol img,
+  .equipment-filters img,
+  .equipment-mode-filters img,
+  .empty-state > img,
+  .resource-inline-medallion,
+  .fact-label img,
+  .casting-title img,
+  .attribute-label img {
+    display: inline-block;
+    flex: 0 0 auto;
+    object-fit: contain;
+    vertical-align: middle;
+  }
+  .section-heading-medallion { width: 34px; height: 34px; margin-right: 9px; border-radius: 50%; }
+  .section-medallion { width: 30px; height: 30px; margin-right: 8px; border-radius: 50%; }
+  .group-medallion { width: 26px; height: 26px; margin-right: 7px; border-radius: 50%; }
+  .section-toolbar h2,
+  .category-heading h3,
+  .equipment-group > header h3 { display: flex; align-items: center; min-width: 0; }
+  .category-heading h3 { gap: 0; }
+  .filiation-control { min-width: 0; display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 7px; }
+  .filiation-control img { width: 34px; height: 34px; border-radius: 50%; filter: drop-shadow(0 2px 2px rgba(50, 30, 10, .16)); }
+  .filiation-control select { min-width: 0; }
+  .attribute-label { display: inline-flex; align-items: center; gap: 7px; }
+  .attribute-label img { width: 24px; height: 24px; border-radius: 50%; }
+  .fact-label { min-width: 0; display: inline-flex !important; align-items: center; gap: 7px; }
+  .combat-facts .fact-label > span { color: #96998f; font-size: 9px; }
+  .fact-label img { width: 24px; height: 24px; border-radius: 50%; opacity: .92; }
+  .casting-title { display: inline-flex; align-items: center; gap: 6px; }
+  .casting-title img { width: 24px; height: 24px; border-radius: 50%; opacity: .9; }
+  .currency-field > span { min-width: 0; display: inline-flex; align-items: center; gap: 7px; }
+  .currency-field > span b { min-width: 0; }
+  .currency-medallion { width: 42px; height: 42px; border-radius: 50%; filter: drop-shadow(0 2px 2px rgba(49, 28, 12, .18)); }
+  .currency-medallion-small { width: 34px; height: 34px; }
+  .equipment-symbol { overflow: hidden; }
+  .equipment-symbol img { width: 30px; height: 30px; border-radius: 50%; }
+  .equipment-filters button,
+  .equipment-mode-filters button { display: inline-flex; align-items: center; gap: 6px; }
+  .equipment-filters button img { width: 24px; height: 24px; border-radius: 50%; }
+  .equipment-mode-filters button img { width: 22px; height: 22px; border-radius: 50%; }
+  .empty-state { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .empty-state > img { width: 34px; height: 34px; border-radius: 50%; opacity: .78; }
+  .resource-inline-medallion { width: 18px; height: 18px; border-radius: 50%; object-fit: contain; vertical-align: middle; }
+  .temp-label, .slot-label { display: inline-flex; align-items: center; gap: 4px; }
+  .equipment-empty-state { min-height: 86px; flex-direction: column; }
+  .equipment-empty-state > img { width: 38px; height: 38px; }
+  .ability-category {
+    background-image: radial-gradient(circle at 96% 0%, color-mix(in srgb, var(--deity) 5%, transparent), transparent 22%), repeating-linear-gradient(0deg, transparent 0 31px, rgba(143, 111, 61, .025) 31px 32px);
+  }
+  .equipment-section { background-image: radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--deity-secondary) 5%, transparent), transparent 25%); }
+  .signature-mark img { width: 34px; height: 34px; border-radius: 50%; object-fit: contain; }
+  .signature-summary > span:first-child { width: 34px; height: 34px; }
+}
+
+@media screen and (max-width: 800px) {
+  .section-heading-medallion { width: 30px; height: 30px; margin-right: 7px; }
+  .section-medallion { width: 27px; height: 27px; margin-right: 6px; }
+  .filiation-control { grid-template-columns: 30px minmax(0, 1fr); gap: 5px; }
+  .filiation-control img { width: 30px; height: 30px; }
+  .currency-medallion { width: 34px; height: 34px; }
+  .currency-medallion-small { width: 30px; height: 30px; }
+  .equipment-filters button img { width: 22px; height: 22px; }
+  .equipment-mode-filters button img { width: 20px; height: 20px; }
+  .ability-category { background-image: none; }
+}
+
+@media print {
+  .section-heading-medallion,
+  .section-medallion,
+  .group-medallion,
+  .narrative-label img,
+  .filiation-control img,
+  .currency-medallion,
+  .equipment-symbol img,
+  .equipment-filters img,
+  .equipment-mode-filters img,
+  .empty-state > img,
+  .resource-inline-medallion,
+  .fact-label img,
+  .casting-title img,
+  .attribute-label img { display: none !important; }
+  .abilities-section,
+  .equipment-section,
+  .story-section,
+  .ability-print-flow .category-filiation,
+  .ability-print-flow .category-abilities { break-before: auto !important; page-break-before: auto !important; }
+  .ability-print-flow > .ability-category { break-inside: auto !important; page-break-inside: auto !important; }
+  .ability-print-flow .ability-list { break-inside: auto !important; page-break-inside: auto !important; }
+  .ability-print-flow .category-heading { break-after: avoid; page-break-after: avoid; }
+  .ability-print-flow .ability-unit,
+  .ability-print-flow .signature-card,
+  .print-equipment-list article { break-inside: avoid; page-break-inside: avoid; }
+}
 @media screen {
   .ability-categories.is-desktop-stacks { display: block; padding-top: 14px; }
   .ability-main-band, .ability-lower-band { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
@@ -2205,9 +2306,8 @@ footer a:hover { color: var(--deity-light); }
   .signature-editor-layer { display: none !important; }
   .ability-print-flow .ability-print,
   .ability-print-flow .signature-print { display: block !important; }
-  .ability-print-flow .category-filiation { break-before: page; }
-  html[data-print-size="A3"] .ability-print-flow .category-filiation { break-before: auto; }
-  html[data-print-size="A3"] .ability-print-flow .category-abilities { break-before: page; }
+  .ability-print-flow .category-filiation,
+  .ability-print-flow .category-abilities { break-before: auto; }
   .combat-facts .fact-edit, .combat-facts .fact-number-input, .combat-facts .fact-reset, .combat-facts .initiative-fact > div > label, .combat-facts input, .combat-facts select, .combat-facts button { display: none !important; }
   .combat-facts .casting-attribute-print, .combat-facts .casting-dc-print { display: block !important; color: #211f1a; font-size: 13pt; font-weight: 750; }
   .combat-facts .editable-fact small { display: block !important; }
@@ -2308,11 +2408,28 @@ footer a:hover { color: var(--deity-light); }
     break-inside: auto !important;
   }
   .abilities-section > .section-toolbar { break-after: avoid-page; }
+  .abilities-section > .section-toolbar { display: none !important; }
+  .ability-print-section-title {
+    margin: 0 0 3mm;
+    padding: 0 0 2mm;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 22pt;
+    line-height: 1;
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+  .ability-print-flow > .ability-print-first-group {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
   .ability-print-flow .category-filiation,
   .ability-print-flow .category-abilities { break-before: auto !important; }
   .ability-print-flow .ability-category { break-inside: auto; }
   .ability-print-flow .ability-unit,
   .ability-print-flow .signature-card { break-inside: avoid; }
+  .ability-print-flow .filiation-signature-section { box-shadow: none; }
   .ability-print-flow .category-heading { break-after: avoid-page; }
   .ability-print-heading {
     display: flex;

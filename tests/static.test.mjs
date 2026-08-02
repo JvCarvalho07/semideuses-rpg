@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("build estático contém a ficha limpa e as ações principais", async () => {
@@ -90,6 +90,7 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(css, /zoom: \.7;/);
   assert.match(css, /\.stats-layout \{[\s\S]*break-inside: avoid;/);
   assert.doesNotMatch(css, /break-after:\s*page/);
+  assert.doesNotMatch(css, /break-before:\s*page/);
   assert.match(css, /\.hero-shell \{ break-after: avoid-page; \}/);
   assert.match(css, /@media \(max-width: 580px\)/);
   assert.match(css, /prefers-reduced-motion/);
@@ -107,6 +108,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(css, /\.equipment-mode-filters/);
   assert.match(css, /\.signature-editor-layer/);
   assert.match(css, /\.number-max-print/);
+  assert.match(app, /ability-print-first-group/);
+  assert.match(app, /ability-print-section-title/);
+  assert.match(css, /\.ability-print-flow > \.ability-print-first-group/);
   assert.match(css, /\.currency-field/);
   assert.match(app, /Restaurar oficial/);
   assert.match(app, /Adicionar linha/);
@@ -151,5 +155,19 @@ test("the import regression fixture covers AI-shaped fields", async () => {
   assert.equal(fixture.equipment[0].type, undefined);
   const app = await readFile(new URL("../src/App.tsx", import.meta.url), "utf8");
   assert.match(app, /normalizeImportedSheet/);
-  assert.match(app, /\(item\.type \|\| "Outro"\)\.slice/);
+  assert.match(app, /function equipmentAsset/);
+});
+
+test("the asset manifest covers the runtime visual system", async () => {
+  const manifest = JSON.parse(await readFile(new URL("../docs/assets-manifest.json", import.meta.url), "utf8"));
+  assert.match(manifest.generation, /Built-in ImageGen/);
+  assert.ok(manifest.assets.length >= 60);
+  assert.equal(new Set(manifest.assets.map((entry) => entry.file)).size, manifest.assets.length);
+  assert.ok(manifest.assets.some((entry) => entry.key === "currency-dracma"));
+  assert.equal(manifest.assets.filter((entry) => entry.key.startsWith("filiation-")).length, 26);
+  for (const entry of manifest.assets) {
+    await access(new URL(`../public/assets/${entry.file}`, import.meta.url));
+    if (entry.sourceFile) await access(new URL(`../public/assets/${entry.sourceFile}`, import.meta.url));
+  }
+  assert.match(await readFile(new URL("../src/assets.ts", import.meta.url), "utf8"), /FILIATION_SEALS/);
 });

@@ -1,0 +1,795 @@
+{
+  "manifestVersion": 1,
+  "title": "Semideuses RPG visual asset system",
+  "generatedFor": "Static character-sheet editor",
+  "runtimeFormat": "WebP",
+  "sourceFormat": "PNG RGBA 256x256 where provided",
+  "generation": "Built-in ImageGen; chroma-key sources and intermediates kept under tmp/imagegen only.",
+  "notes": [
+    "The three existing resource medallions and resource texture were preserved.",
+    "Controls such as plus, minus, chevrons and search remain code-native SVG/CSS.",
+    "Filiation seal mapping follows the exact FILIATIONS keys in src/model.ts; Héstia is intentionally absent.",
+    "Decorative assets are hidden or attenuated in print to protect content density."
+  ],
+  "assets": [
+    {
+      "key": "resource-vitality",
+      "file": "resource-vitality.webp",
+      "sourceFile": "resource-vitality.png",
+      "purpose": "PV e PV temporário",
+      "prompt": "Existing approved vitality medalion: laurel and heart in the project bronze family.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "resource-mana",
+      "file": "resource-mana.webp",
+      "sourceFile": "resource-mana.png",
+      "purpose": "MP",
+      "prompt": "Existing approved mana medalion: amphora and Aegean flame.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "resource-divine",
+      "file": "resource-divine.webp",
+      "sourceFile": "resource-divine.png",
+      "purpose": "Recurso divino e fallback de filiação",
+      "prompt": "Existing approved divine-power medalion.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "resource-panel-texture",
+      "file": "resource-panel-texture.webp",
+      "purpose": "Textura extremamente sutil do painel de recursos",
+      "prompt": "Existing approved light parchment and meander texture.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 960,
+        "height": 960
+      }
+    },
+    {
+      "key": "currency-dracma",
+      "file": "currency-dracma.webp",
+      "sourceFile": "currency-dracma.png",
+      "purpose": "Painel de Dracmas",
+      "prompt": "Original neutral dracma medalion with owl, laurel and Greek meander.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "currency-human",
+      "file": "currency-human.webp",
+      "sourceFile": "currency-human.png",
+      "purpose": "Dinheiro humano",
+      "prompt": "Generic human-world money pouch and coins without a national symbol.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "stat-armor",
+      "file": "stat-armor.webp",
+      "sourceFile": "stat-armor.png",
+      "purpose": "CA",
+      "prompt": "Low-relief Greco-Roman combat quick-stat seal; distinct symbolic silhouette, no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "stat-initiative",
+      "file": "stat-initiative.webp",
+      "sourceFile": "stat-initiative.png",
+      "purpose": "Iniciativa",
+      "prompt": "Low-relief Greco-Roman combat quick-stat seal; distinct symbolic silhouette, no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "stat-speed",
+      "file": "stat-speed.webp",
+      "sourceFile": "stat-speed.png",
+      "purpose": "Deslocamento",
+      "prompt": "Low-relief Greco-Roman combat quick-stat seal; distinct symbolic silhouette, no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "stat-perception",
+      "file": "stat-perception.webp",
+      "sourceFile": "stat-perception.png",
+      "purpose": "Percepção",
+      "prompt": "Low-relief Greco-Roman combat quick-stat seal; distinct symbolic silhouette, no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "stat-casting",
+      "file": "stat-casting.webp",
+      "sourceFile": "stat-casting.png",
+      "purpose": "Conjuração",
+      "prompt": "Low-relief Greco-Roman combat quick-stat seal; distinct symbolic silhouette, no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "stat-saving-throws",
+      "file": "stat-saving-throws.webp",
+      "sourceFile": "stat-saving-throws.png",
+      "purpose": "Testes de resistência",
+      "prompt": "Low-relief Greco-Roman combat quick-stat seal; distinct symbolic silhouette, no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "stat-temp-hp",
+      "file": "stat-temp-hp.webp",
+      "sourceFile": "stat-temp-hp.png",
+      "purpose": "PV temporário",
+      "prompt": "Low-relief Greco-Roman combat quick-stat seal; distinct symbolic silhouette, no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "stat-favor",
+      "file": "stat-favor.webp",
+      "sourceFile": "stat-favor.png",
+      "purpose": "Favor divino",
+      "prompt": "Low-relief Greco-Roman combat quick-stat seal; distinct symbolic silhouette, no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "stat-sustain",
+      "file": "stat-sustain.webp",
+      "sourceFile": "stat-sustain.png",
+      "purpose": "Sustentação",
+      "prompt": "Low-relief Greco-Roman combat quick-stat seal; distinct symbolic silhouette, no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "stat-divine",
+      "file": "stat-divine.webp",
+      "sourceFile": "stat-divine.png",
+      "purpose": "Recurso divino",
+      "prompt": "Low-relief Greco-Roman combat quick-stat seal; distinct symbolic silhouette, no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "attribute-for",
+      "file": "attribute-for.webp",
+      "sourceFile": "attribute-for.png",
+      "purpose": "Atributo FOR",
+      "prompt": "Low-relief attribute emblem: spear/column, winged bow/sandal, rock shield, scroll/lamp, owl/eye or lyre/mask; no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "attribute-des",
+      "file": "attribute-des.webp",
+      "sourceFile": "attribute-des.png",
+      "purpose": "Atributo DES",
+      "prompt": "Low-relief attribute emblem: spear/column, winged bow/sandal, rock shield, scroll/lamp, owl/eye or lyre/mask; no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "attribute-con",
+      "file": "attribute-con.webp",
+      "sourceFile": "attribute-con.png",
+      "purpose": "Atributo CON",
+      "prompt": "Low-relief attribute emblem: spear/column, winged bow/sandal, rock shield, scroll/lamp, owl/eye or lyre/mask; no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "attribute-int",
+      "file": "attribute-int.webp",
+      "sourceFile": "attribute-int.png",
+      "purpose": "Atributo INT",
+      "prompt": "Low-relief attribute emblem: spear/column, winged bow/sandal, rock shield, scroll/lamp, owl/eye or lyre/mask; no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "attribute-sab",
+      "file": "attribute-sab.webp",
+      "sourceFile": "attribute-sab.png",
+      "purpose": "Atributo SAB",
+      "prompt": "Low-relief attribute emblem: spear/column, winged bow/sandal, rock shield, scroll/lamp, owl/eye or lyre/mask; no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "attribute-car",
+      "file": "attribute-car.webp",
+      "sourceFile": "attribute-car.png",
+      "purpose": "Atributo CAR",
+      "prompt": "Low-relief attribute emblem: spear/column, winged bow/sandal, rock shield, scroll/lamp, owl/eye or lyre/mask; no lettering.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "section-skills",
+      "file": "section-skills.webp",
+      "sourceFile": "section-skills.png",
+      "purpose": "Cabeçalho de Skills e História",
+      "prompt": "Section seal in the same engraved Greek meander family, restrained and readable at small size.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "section-path",
+      "file": "section-path.webp",
+      "sourceFile": "section-path.png",
+      "purpose": "Cabeçalho de Caminho Divino",
+      "prompt": "Section seal in the same engraved Greek meander family, restrained and readable at small size.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "section-signature",
+      "file": "section-signature.webp",
+      "sourceFile": "section-signature.png",
+      "purpose": "Cabeçalho de Assinatura da Filiação",
+      "prompt": "Section seal in the same engraved Greek meander family, restrained and readable at small size.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "section-filiation",
+      "file": "section-filiation.webp",
+      "sourceFile": "section-filiation.png",
+      "purpose": "Cabeçalho de Habilidades de Filiação",
+      "prompt": "Section seal in the same engraved Greek meander family, restrained and readable at small size.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "section-abilities",
+      "file": "section-abilities.webp",
+      "sourceFile": "section-abilities.png",
+      "purpose": "Cabeçalho de Habilidades e Traços",
+      "prompt": "Section seal in the same engraved Greek meander family, restrained and readable at small size.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "section-talents",
+      "file": "section-talents.webp",
+      "sourceFile": "section-talents.png",
+      "purpose": "Cabeçalho de Talentos",
+      "prompt": "Section seal in the same engraved Greek meander family, restrained and readable at small size.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "section-notes",
+      "file": "section-notes.webp",
+      "sourceFile": "section-notes.png",
+      "purpose": "Notas",
+      "prompt": "Section seal in the same engraved Greek meander family, restrained and readable at small size.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "equipment-arma",
+      "file": "equipment-arma.webp",
+      "sourceFile": "equipment-arma.png",
+      "purpose": "Arma",
+      "prompt": "Equipment category medallion with one clear object symbol and consistent Greek meander rim.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "equipment-armadura",
+      "file": "equipment-armadura.webp",
+      "sourceFile": "equipment-armadura.png",
+      "purpose": "Armadura",
+      "prompt": "Equipment category medallion with one clear object symbol and consistent Greek meander rim.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "equipment-escudo",
+      "file": "equipment-escudo.webp",
+      "sourceFile": "equipment-escudo.png",
+      "purpose": "Escudo",
+      "prompt": "Equipment category medallion with one clear object symbol and consistent Greek meander rim.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "equipment-ferramenta",
+      "file": "equipment-ferramenta.webp",
+      "sourceFile": "equipment-ferramenta.png",
+      "purpose": "Ferramenta",
+      "prompt": "Equipment category medallion with one clear object symbol and consistent Greek meander rim.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "equipment-acessorio",
+      "file": "equipment-acessorio.webp",
+      "sourceFile": "equipment-acessorio.png",
+      "purpose": "Acessório",
+      "prompt": "Equipment category medallion with one clear object symbol and consistent Greek meander rim.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "equipment-reliquia",
+      "file": "equipment-reliquia.webp",
+      "sourceFile": "equipment-reliquia.png",
+      "purpose": "Relíquia",
+      "prompt": "Equipment category medallion with one clear object symbol and consistent Greek meander rim.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "equipment-consumivel",
+      "file": "equipment-consumivel.webp",
+      "sourceFile": "equipment-consumivel.png",
+      "purpose": "Consumível",
+      "prompt": "Equipment category medallion with one clear object symbol and consistent Greek meander rim.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "equipment-outro",
+      "file": "equipment-outro.webp",
+      "sourceFile": "equipment-outro.png",
+      "purpose": "Outro",
+      "prompt": "Equipment category medallion with one clear object symbol and consistent Greek meander rim.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "equipment-equipped",
+      "file": "equipment-equipped.webp",
+      "sourceFile": "equipment-equipped.png",
+      "purpose": "Estado equipado",
+      "prompt": "Equipment category medallion with one clear object symbol and consistent Greek meander rim.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "equipment-inventory",
+      "file": "equipment-inventory.webp",
+      "sourceFile": "equipment-inventory.png",
+      "purpose": "Estado inventário",
+      "prompt": "Equipment category medallion with one clear object symbol and consistent Greek meander rim.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-zeus",
+      "file": "filiation-zeus.webp",
+      "sourceFile": "filiation-zeus.png",
+      "purpose": "Selo selecionado da filiação Zeus",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-poseidon",
+      "file": "filiation-poseidon.webp",
+      "sourceFile": "filiation-poseidon.png",
+      "purpose": "Selo selecionado da filiação Poseidon",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-hades",
+      "file": "filiation-hades.webp",
+      "sourceFile": "filiation-hades.png",
+      "purpose": "Selo selecionado da filiação Hades",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-atena",
+      "file": "filiation-atena.webp",
+      "sourceFile": "filiation-atena.png",
+      "purpose": "Selo selecionado da filiação Atena",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-ares",
+      "file": "filiation-ares.webp",
+      "sourceFile": "filiation-ares.png",
+      "purpose": "Selo selecionado da filiação Ares",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-apolo",
+      "file": "filiation-apolo.webp",
+      "sourceFile": "filiation-apolo.png",
+      "purpose": "Selo selecionado da filiação Apolo",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-hefesto",
+      "file": "filiation-hefesto.webp",
+      "sourceFile": "filiation-hefesto.png",
+      "purpose": "Selo selecionado da filiação Hefesto",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-hermes",
+      "file": "filiation-hermes.webp",
+      "sourceFile": "filiation-hermes.png",
+      "purpose": "Selo selecionado da filiação Hermes",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-afrodite",
+      "file": "filiation-afrodite.webp",
+      "sourceFile": "filiation-afrodite.png",
+      "purpose": "Selo selecionado da filiação Afrodite",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-demeter",
+      "file": "filiation-demeter.webp",
+      "sourceFile": "filiation-demeter.png",
+      "purpose": "Selo selecionado da filiação Deméter",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-dionisio",
+      "file": "filiation-dionisio.webp",
+      "sourceFile": "filiation-dionisio.png",
+      "purpose": "Selo selecionado da filiação Dionísio",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-artemis",
+      "file": "filiation-artemis.webp",
+      "sourceFile": "filiation-artemis.png",
+      "purpose": "Selo selecionado da filiação Ártemis",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-hecate",
+      "file": "filiation-hecate.webp",
+      "sourceFile": "filiation-hecate.png",
+      "purpose": "Selo selecionado da filiação Hécate",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-iris",
+      "file": "filiation-iris.webp",
+      "sourceFile": "filiation-iris.png",
+      "purpose": "Selo selecionado da filiação Íris",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-nemesis",
+      "file": "filiation-nemesis.webp",
+      "sourceFile": "filiation-nemesis.png",
+      "purpose": "Selo selecionado da filiação Nêmesis",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-hipnos",
+      "file": "filiation-hipnos.webp",
+      "sourceFile": "filiation-hipnos.png",
+      "purpose": "Selo selecionado da filiação Hipnos",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-morfeu",
+      "file": "filiation-morfeu.webp",
+      "sourceFile": "filiation-morfeu.png",
+      "purpose": "Selo selecionado da filiação Morfeu",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-nike",
+      "file": "filiation-nike.webp",
+      "sourceFile": "filiation-nike.png",
+      "purpose": "Selo selecionado da filiação Nike",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-tique",
+      "file": "filiation-tique.webp",
+      "sourceFile": "filiation-tique.png",
+      "purpose": "Selo selecionado da filiação Tique",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-tanatos",
+      "file": "filiation-tanatos.webp",
+      "sourceFile": "filiation-tanatos.png",
+      "purpose": "Selo selecionado da filiação Tânatos",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-eolo",
+      "file": "filiation-eolo.webp",
+      "sourceFile": "filiation-eolo.png",
+      "purpose": "Selo selecionado da filiação Éolo",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-circe",
+      "file": "filiation-circe.webp",
+      "sourceFile": "filiation-circe.png",
+      "purpose": "Selo selecionado da filiação Circe",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-persefone",
+      "file": "filiation-persefone.webp",
+      "sourceFile": "filiation-persefone.png",
+      "purpose": "Selo selecionado da filiação Perséfone",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-hebe",
+      "file": "filiation-hebe.webp",
+      "sourceFile": "filiation-hebe.png",
+      "purpose": "Selo selecionado da filiação Hebe",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-eros",
+      "file": "filiation-eros.webp",
+      "sourceFile": "filiation-eros.png",
+      "purpose": "Selo selecionado da filiação Eros",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    },
+    {
+      "key": "filiation-nyx",
+      "file": "filiation-nyx.webp",
+      "sourceFile": "filiation-nyx.png",
+      "purpose": "Selo selecionado da filiação Nyx",
+      "prompt": "One inspected deity emblem from an aligned 4x4 sprite, using the symbol appropriate to this supported filiation; no text.",
+      "mode": "built-in ImageGen + local chroma-key removal",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      }
+    }
+  ]
+}
