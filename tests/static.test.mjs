@@ -1,18 +1,27 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
+/** App.tsx e os componentes de src/ui, lidos como um só texto (o código da interface está dividido em arquivos). */
+async function readInterface() {
+  const folder = new URL("../src/ui/", import.meta.url);
+  const files = (await readdir(folder)).filter((name) => /\.tsx?$/.test(name)).sort();
+  const parts = await Promise.all([readFile(new URL("../src/App.tsx", import.meta.url), "utf8"), ...files.map((name) => readFile(new URL(name, folder), "utf8"))]);
+  return parts.join("\n");
+}
+
 test("build estático contém a ficha limpa e as ações principais", async () => {
-  const [html, model, app, css, readme, signatures, importer, schema, template] = await Promise.all([
+  const [html, model, app, css, readme, signatures, importer, schema, template, rules] = await Promise.all([
     readFile(new URL("../dist/index.html", import.meta.url), "utf8"),
     readFile(new URL("../src/model.ts", import.meta.url), "utf8"),
-    readFile(new URL("../src/App.tsx", import.meta.url), "utf8"),
+    readInterface(),
     readFile(new URL("../src/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../README.md", import.meta.url), "utf8"),
     readFile(new URL("../src/filiationSignatures.ts", import.meta.url), "utf8"),
     readFile(new URL("../src/import.ts", import.meta.url), "utf8"),
     readFile(new URL("../public/semideuses-chatgpt-schema.json", import.meta.url), "utf8"),
     readFile(new URL("../public/semideuses-chatgpt-template.json", import.meta.url), "utf8"),
+    readFile(new URL("../src/rules.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(html, /Semideuses RPG — Ficha Digital/);
@@ -31,7 +40,7 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(model, /initiativeOverride: null,/);
   assert.match(model, /speedOverride: null,/);
   assert.match(model, /perceptionOverride: null,/);
-  assert.match(model, /version: 3,/);
+  assert.match(model, /version: 4,/);
   assert.match(model, /filiationSignatures: \{\},/);
   assert.doesNotMatch(model, /Héstia|Hestia/);
   assert.match(app, /semideuses-sheet-v3/);
@@ -48,8 +57,7 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /Adicionar equipamento/);
   assert.match(app, /normalizeSheet/);
   assert.match(app, /normalizeImportedSheet/);
-  assert.match(app, /ensureFiliationSignatures/);
-  assert.match(app, /FiliationSignatureSection/);
+  assert.match(app, /applyIdentity/);
   assert.match(app, /ability-column-left/);
   assert.match(app, /ability-column-right/);
   assert.match(app, /function AbilityCard/);
@@ -77,8 +85,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(app, /O que restará quando a aventura terminar/);
   assert.match(app, /Ascensão Menor/);
   assert.match(importer, /legacyLegendEntries/);
-  assert.match(app, /castingAttackBonus = castingModifier \+ prof/);
-  assert.match(app, /automaticCastingDc = 8 \+ castingModifier \+ prof/);
+  assert.match(rules, /castingAttackBonus: castingModifier \+ prof/);
+  assert.match(rules, /autoDc = 8 \+ castingModifier \+ prof/);
+  assert.match(app, /deriveStats/);
   assert.match(app, /CD das habilidades/);
   assert.match(app, /Bônus extra de iniciativa/);
   assert.match(app, /Apoiar o projeto no GitHub com uma estrela/);
@@ -105,7 +114,8 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(css, /\.ability-print-heading/);
   assert.match(css, /\.ability-print-name/);
   assert.match(css, /\.divine-block \.number-control \{ grid-template-columns: minmax\(0, 1fr\) 36px 40px auto minmax\(30px, 36px\) 36px; \}/);
-  assert.match(css, /\.equipment-mode-filters/);
+  assert.match(css, /\.equip-toggle/);
+  assert.match(css, /\.effect-card/);
   assert.match(css, /\.signature-editor-layer/);
   assert.match(css, /\.number-max-print/);
   assert.match(app, /ability-print-first-group/);
@@ -114,7 +124,9 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(css, /\.currency-field/);
   assert.match(app, /Restaurar oficial/);
   assert.match(app, /Adicionar linha/);
-  assert.match(app, /equipmentMode/);
+  assert.match(app, /EquipmentAdder/);
+  assert.match(app, /EffectsSection/);
+  assert.match(app, /Bênçãos e maldições/);
   assert.match(importer, /officialSnapshot/);
   assert.match(model, /SignatureMove/);
   assert.deepEqual(JSON.parse(template).abilityGroups, { abilities: [], filiation: [], path: [], skills: [], talents: [] });
@@ -122,11 +134,11 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.ok(JSON.parse(schema).properties.humanMoney);
   assert.ok(JSON.parse(schema).properties.humanMoneyCurrency);
   assert.ok(JSON.parse(schema).properties.caOverride);
-  assert.equal((signatures.match(/id: "[^"]+",\n\s+title:/g) || []).length, 26);
+  assert.equal((signatures.match(/id: "[^"]+",\r?\n\s+title:/g) || []).length, 26);
   assert.match(signatures, /zeus-tempestade-crescente/);
   assert.match(signatures, /ares-furia/);
   assert.match(signatures, /poseidon-mare/);
-  assert.match(signatures, /pdfPage: 65/);
+  assert.match(signatures, /pdfPage: 137/);
   assert.match(signatures, /Estação atual/);
   assert.match(signatures, /Sintonia atual/);
   assert.doesNotMatch(signatures, /Héstia|Hestia/);
@@ -153,7 +165,7 @@ test("the import regression fixture covers AI-shaped fields", async () => {
   const fixture = JSON.parse(await readFile(new URL("./fixtures/hector-vance-site-v3-sanitized.json", import.meta.url), "utf8"));
   assert.equal(fixture.abilityGroups.abilities[0].name, undefined);
   assert.equal(fixture.equipment[0].type, undefined);
-  const app = await readFile(new URL("../src/App.tsx", import.meta.url), "utf8");
+  const app = await readInterface();
   assert.match(app, /normalizeImportedSheet/);
   assert.match(app, /function equipmentAsset/);
 });

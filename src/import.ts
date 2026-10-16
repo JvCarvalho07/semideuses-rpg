@@ -5,6 +5,7 @@ import {
   type AbilityCategory,
   type AttributeKey,
   type CharacterSheet,
+  type Effect,
   type Equipment,
   type FiliationSignatureState,
   type ImportReport,
@@ -12,6 +13,9 @@ import {
   type SignatureResource,
 } from "./model";
 import { ensureFiliationSignatures, makeOfficialState, signatureDefinition } from "./filiationSignatures";
+import { migrateSheet, readLegacyValues, SHEET_VERSION } from "./migrate";
+import { syncAbilities } from "./abilitySync";
+import { ARMOR_CATEGORIES, clampResource, deriveStats, type ArmorCategory } from "./rules";
 
 type Dict = Record<string, unknown>;
 const ATTRIBUTES: AttributeKey[] = ["for", "des", "con", "int", "sab", "car"];
@@ -50,8 +54,9 @@ function normalizeAbility(rawValue: unknown, category: string, index: number, re
 function inferEquipmentType(raw: Dict): string {
   const value = str(first(raw, "type", "category"));
   if (EQUIPMENT_TYPES.includes(value)) return value;
-  const text = `${str(raw.title)} ${str(raw.name)} ${str(raw.rules)}`.toLowerCase();
-  return text.includes("armadura") ? "Armadura" : text.includes("escudo") ? "Escudo" : text.includes("espada") || text.includes("arma") ? "Arma" : "Outro";
+  // O nome do item decide primeiro; as regras só desempatam (uma espada pode citar "escudo" no texto).
+  const guess = (text: string) => /armaduras?/.test(text) ? "Armadura" : /escudos?/.test(text) ? "Escudo" : /(espadas?|armas?)/.test(text) ? "Arma" : "";
+  return guess(`${str(raw.title)} ${str(raw.name)}`.toLowerCase()) || guess(str(raw.rules).toLowerCase()) || "Outro";
 }
 function normalizeEquipment(rawValue: unknown, index: number, report: ImportReport): Equipment {
   const raw = dict(rawValue);
@@ -61,9 +66,23 @@ function normalizeEquipment(rawValue: unknown, index: number, report: ImportRepo
   return {
     id: str(raw.id, `equipment-${index + 1}`), name: str(first(raw, "name", "title")), type,
     quantity: Math.max(0, num(first(raw, "quantity", "qty"), 1)), equipped: bool(raw.equipped),
-    armorClass: num(first(raw, "armorClass", "caBonus")), attack: str(raw.attack), damage: str(raw.damage),
+    armorClass: num(first(raw, "armorClass", "caBonus")),
+    armorCategory: ARMOR_CATEGORIES.includes(raw.armorCategory as ArmorCategory) ? raw.armorCategory as ArmorCategory : "",
+    attack: str(raw.attack), damage: str(raw.damage),
     properties: str(first(raw, "properties", "rules", "description")), notes: str(raw.notes),
-    extra: extras(raw, ["id", "name", "title", "type", "category", "quantity", "qty", "equipped", "armorClass", "caBonus", "attack", "damage", "properties", "rules", "description", "notes"]),
+    extra: extras(raw, ["id", "name", "title", "type", "category", "quantity", "qty", "equipped", "armorClass", "armorCategory", "caBonus", "attack", "damage", "properties", "rules", "description", "notes"]),
+  };
+}
+
+function normalizeEffect(rawValue: unknown, index: number): Effect {
+  const raw = dict(rawValue);
+  const whole = (value: unknown) => Math.round(num(value));
+  return {
+    id: str(raw.id, `effect-${index + 1}`),
+    kind: raw.kind === "Maldição" ? "Maldição" : "Bênção",
+    name: str(first(raw, "name", "title")), source: str(raw.source), duration: str(raw.duration),
+    description: str(first(raw, "description", "rules")), active: raw.active === undefined ? true : bool(raw.active),
+    ca: whole(raw.ca), initiative: whole(raw.initiative), speed: whole(raw.speed), hpMax: whole(raw.hpMax),
   };
 }
 
@@ -126,18 +145,17 @@ export function normalizeImportedSheet(candidate: unknown): { sheet: CharacterSh
   const attributes = Object.fromEntries(ATTRIBUTES.map((key) => [key, num(dict(raw.attributes)[key], 10)])) as CharacterSheet["attributes"];
   const personalityRaw = dict(raw.personality);
   const personality = Object.fromEntries(["trait", "ideal", "bond", "flaw", "backgroundTrait", "backgroundBond", "appearance", "history", "notes"].map((key) => [key, str(personalityRaw[key])])) as CharacterSheet["personality"];
-  const hpMax = Math.max(0, num(raw.hpMax));
-  const manaMax = Math.max(0, num(raw.manaMax));
-  const known = ["version", "avatarDataUrl", "name", "legendDestiny", "legacyLegendEntries", "filiation", "pathName", "origin", "race", "background", "player", "level", "hp", "hpMax", "hpTemp", "mana", "manaMax", "divineResource", "favor", "sustain", "castingAttribute", "castingDcOverride", "attributes", "saveProficiencies", "skillRanks", "speed", "initiativeExtra", "caExtra", "caOverride", "initiativeOverride", "speedOverride", "perceptionOverride", "dracmas", "humanMoney", "humanMoneyCurrency", "money", "currency", "filiationSignatures", "abilityGroups", "equipment", "personality", "importReport"];
+  const legacy = readLegacyValues(raw);
+  const known = ["version", "avatarDataUrl", "name", "legendDestiny", "legacyLegendEntries", "filiation", "pathName", "origin", "race", "background", "player", "level", "hp", "hpMax", "hpMaxOverride", "hpTemp", "mana", "manaMax", "manaMaxOverride", "divineResource", "resourceMaxOverride", "favor", "sustain", "castingAttribute", "castingDcOverride", "attributes", "saveProficiencies", "domSkill", "skillRanks", "skillRankOverrides", "speed", "initiativeExtra", "caExtra", "caOverride", "initiativeOverride", "speedOverride", "perceptionOverride", "dracmas", "humanMoney", "humanMoneyCurrency", "money", "currency", "filiationSignatures", "abilityGroups", "equipment", "effects", "personality", "importReport"];
   report.unknownFields.push(...Object.keys(raw).filter((key) => !known.includes(key)));
   const base: CharacterSheet = {
     ...INITIAL_SHEET, version: 3, avatarDataUrl: str(raw.avatarDataUrl), name: str(raw.name), legendDestiny: str(raw.legendDestiny),
     filiation: str(raw.filiation), pathName: str(raw.pathName), origin: str(raw.origin, legacyOrigin), background: str(raw.background), player: str(raw.player),
-    level: Math.max(1, Math.floor(num(raw.level, 1))), hp: Math.min(hpMax, Math.max(0, num(raw.hp))), hpMax, hpTemp: Math.max(0, num(raw.hpTemp)),
-    mana: Math.min(manaMax, Math.max(0, num(raw.mana))), manaMax, divineResource: Math.max(0, num(raw.divineResource)), favor: Math.max(0, Math.min(5, num(raw.favor))), sustain: Math.max(0, num(raw.sustain)),
+    level: Math.max(1, Math.floor(num(raw.level, 1))), hp: Math.max(0, num(raw.hp)), hpMaxOverride: raw.hpMaxOverride == null ? null : Math.max(0, num(raw.hpMaxOverride)), hpTemp: Math.max(0, num(raw.hpTemp)),
+    mana: Math.max(0, num(raw.mana)), manaMaxOverride: raw.manaMaxOverride == null ? null : Math.max(0, num(raw.manaMaxOverride)), divineResource: num(raw.divineResource), resourceMaxOverride: raw.resourceMaxOverride == null ? null : Math.max(0, num(raw.resourceMaxOverride)), favor: Math.max(0, Math.min(5, num(raw.favor))), sustain: Math.max(0, num(raw.sustain)),
     castingAttribute: ATTRIBUTES.includes(raw.castingAttribute as AttributeKey) ? raw.castingAttribute as AttributeKey : "sab", castingDcOverride: raw.castingDcOverride == null ? null : num(raw.castingDcOverride),
-    attributes, saveProficiencies: arr(raw.saveProficiencies).filter((value): value is AttributeKey => ATTRIBUTES.includes(value as AttributeKey)), skillRanks: Object.fromEntries(Object.entries(dict(raw.skillRanks)).map(([key, value]) => [key, num(value)])),
-    speed: num(raw.speed), initiativeExtra: num(raw.initiativeExtra), caExtra: num(raw.caExtra),
+    attributes, saveProficiencies: arr(raw.saveProficiencies).filter((value): value is AttributeKey => ATTRIBUTES.includes(value as AttributeKey)), skillRankOverrides: Object.fromEntries(Object.entries(dict(raw.skillRankOverrides)).map(([key, value]) => [key, Math.max(0, Math.min(2, Math.floor(num(value))))])),
+    domSkill: str(raw.domSkill), initiativeExtra: num(raw.initiativeExtra), caExtra: num(raw.caExtra),
     caOverride: raw.caOverride == null ? null : num(raw.caOverride),
     initiativeOverride: raw.initiativeOverride == null ? null : num(raw.initiativeOverride),
     speedOverride: raw.speedOverride == null ? null : num(raw.speedOverride),
@@ -146,8 +164,20 @@ export function normalizeImportedSheet(candidate: unknown): { sheet: CharacterSh
     humanMoney: Math.max(0, num(first(raw, "humanMoney", "money"))),
     humanMoneyCurrency: str(first(raw, "humanMoneyCurrency", "currency"), "R$"),
     filiationSignatures: normalizeSignatures(raw.filiationSignatures, str(raw.filiation), report), abilityGroups: groups,
-    legacyLegendEntries: legacyLegend.map((item, index) => normalizeAbility(item, "legend", index, report)), equipment: arr(raw.equipment).map((item, index) => normalizeEquipment(item, index, report)), personality,
+    legacyLegendEntries: legacyLegend.map((item, index) => normalizeAbility(item, "legend", index, report)), equipment: arr(raw.equipment).map((item, index) => normalizeEquipment(item, index, report)), effects: arr(raw.effects).map(normalizeEffect), personality,
   };
-  base.importReport = report;
-  return { sheet: base, report, recognized };
+  const migrated = migrateSheet(base, legacy, report);
+  const derived = deriveStats(migrated);
+  migrated.hp = Math.min(migrated.hp, derived.hpMax.value);
+  migrated.mana = Math.min(migrated.mana, derived.manaMax.value);
+  if (derived.resource) migrated.divineResource = clampResource(migrated.divineResource, derived.resource);
+  else migrated.divineResource = Math.max(0, migrated.divineResource);
+  // Fichas antigas recebem as habilidades do livro que ainda não tinham (sem duplicar o que já cadastraram).
+  if (legacy.version < SHEET_VERSION) {
+    const synced = syncAbilities(migrated);
+    migrated.abilityGroups = synced.abilityGroups;
+    if (synced.added.length) note(report, `habilidades: ${synced.added.length} do livro acrescentadas (${synced.added.slice(0, 6).join(", ")}${synced.added.length > 6 ? "…" : ""})`);
+  }
+  migrated.importReport = report;
+  return { sheet: migrated, report, recognized };
 }

@@ -1,958 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ChangeEvent } from "react";
-import { createPortal } from "react-dom";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import {
-  ABILITY_META,
-  ATTRIBUTE_LABELS,
-  FILIATIONS,
-  INITIAL_SHEET,
-  SKILLS,
-  makeId,
-  type Ability,
-  type AbilityCategory,
-  type AttributeKey,
-  type CharacterSheet,
-  type Equipment,
-  type FiliationSignatureState,
-} from "./model";
-import {
-  ensureFiliationSignatures,
-  makeOfficialState,
-  signatureDefinition,
-} from "./filiationSignatures";
+import { ATTRIBUTE_LABELS, FILIATIONS, INITIAL_SHEET, makeId, type AttributeKey, type CharacterSheet } from "./model";
+import { BACKGROUNDS, INITIATIVE_BASE_BONUS, clampResource, deriveStats, setEquipped, signed } from "./rules";
+import { pathNames } from "./abilitySync";
+import { applyBackground, applyIdentity, applyLevel, applyPath, cycleSkill } from "./sheetActions";
 import { normalizeImportedSheet } from "./import";
-import { ASSETS, FILIATION_SEALS } from "./assets";
+import { ASSETS } from "./assets";
+import { EQUIPMENT_TYPES, LEGEND_CHOICES, ORIGIN_SUGGESTIONS, type PrintFormat, RESOURCE_ASSETS } from "./ui/config";
+import { equipmentAsset, filiationSeal, initialPrintFormat } from "./ui/format";
+import { NumberControl, ResourceBar } from "./ui/meters";
+import { prepareAvatar } from "./ui/avatar";
+import { AbilityLayout } from "./ui/abilities";
+import { EquipmentAdder, EquipmentRow } from "./ui/equipment";
+import { Fact } from "./ui/facts";
+import { TAB_SECTION_IDS, TabBar, VitalsDock, useActiveSection, useScrolledPast } from "./ui/navigation";
+import { EffectsSection } from "./ui/effects";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
-
-const EQUIPMENT_TYPES = ["Arma", "Armadura", "Escudo", "Ferramenta", "Acessório", "Relíquia", "Consumível", "Outro"];
-const RESOURCE_ASSETS = {
-  health: `${import.meta.env.BASE_URL}assets/resource-vitality.webp`,
-  mana: `${import.meta.env.BASE_URL}assets/resource-mana.webp`,
-  divine: `${import.meta.env.BASE_URL}assets/resource-divine.webp`,
-  texture: `${import.meta.env.BASE_URL}assets/resource-panel-texture.webp`,
-} as const;
-const ABILITY_SECTION_ASSETS = {
-  abilities: ASSETS.sections.abilities,
-  filiation: ASSETS.sections.filiation,
-  path: ASSETS.sections.path,
-  skills: ASSETS.sections.skills,
-  talents: ASSETS.sections.talents,
-} as const;
-const ORIGIN_SUGGESTIONS = ["Semideus Grego", "Sátiro", "Ciclope", "Mortal Vidente", "Legado"];
-type PrintFormat = "A4" | "A3" | "A5";
-const LEGEND_CHOICES = [
-  {
-    value: "O Voto",
-    title: "O Voto",
-    description: "Sirva a um ideal eterno. O tempo deixa de tocar você, mas sua imortalidade passa a obedecer regras que não podem ser quebradas.",
-  },
-  {
-    value: "Ascensão Menor",
-    title: "Ascensão Menor",
-    description: "Assuma um domínio órfão como espírito ou divindade menor. Você se torna imortal, mas deixa para trás a vida de herói mortal.",
-  },
-  {
-    value: "Lenda Mortal",
-    title: "Lenda Mortal",
-    description: "Recuse a imortalidade. Sua vida continua finita, seus feitos permanecem e seu nome atravessa as gerações.",
-  },
-  {
-    value: "Renascimento",
-    title: "Renascimento",
-    description: "Escolha viver novamente e buscar a Ilha dos Bem-Aventurados através de três vidas verdadeiramente heroicas.",
-  },
-] as const;
-
-function modifier(score: number) {
-  return Math.floor((score - 10) / 2);
-}
-
-function signed(value: number) {
-  return value >= 0 ? `+${value}` : String(value);
-}
-
-function normalizedLabel(value: string) {
-  return value.trim().normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase();
-}
-
-function formatCostValue(value: string | undefined, resourceName?: string) {
-  const raw = value?.trim() || "";
-  if (!raw) return "";
-  const normalized = normalizedLabel(raw).replace(/[—–]/g, "-");
-  if (normalized === "-" || normalized === "sem custo" || /^0(?:[.,]0)?$/.test(normalized)) return "Sem custo";
-  if (resourceName && /^\d+(?:[.,]\d+)?$/.test(raw)) return `${raw} ${resourceName}`;
-  return raw;
-}
-
-function formatCostLabel(value: string | undefined, resourceName?: string) {
-  const formatted = formatCostValue(value, resourceName);
-  if (!formatted) return "";
-  return formatted === "Sem custo" ? formatted : `Custo: ${formatted}`;
-}
-
-function formatActivationLabel(value: string | undefined) {
-  const raw = value?.trim() || "";
-  if (!raw) return "";
-  const normalized = normalizedLabel(raw);
-  return normalized.includes("conforme descricao") || normalized.includes("passiva") || normalized.includes("sempre")
-    ? `Ativação: ${raw}`
-    : `Ação: ${raw}`;
-}
-
-function filiationSeal(filiationName: string) {
-  return FILIATION_SEALS[filiationName as keyof typeof FILIATION_SEALS] || ASSETS.resources.divine;
-}
-
-function equipmentAsset(type: string) {
-  return ASSETS.equipment[type as keyof typeof ASSETS.equipment] || ASSETS.equipment.Outro;
-}
-
-function proficiency(level: number) {
-  return 2 + Math.floor((Math.max(1, level) - 1) / 4);
-}
-
-function initialPrintFormat(): PrintFormat {
-  const queryFormat = new URLSearchParams(window.location.search).get("paper");
-  if (queryFormat === "A3" || queryFormat === "A4" || queryFormat === "A5") return queryFormat;
-  const storedFormat = localStorage.getItem("semideuses-print-format");
-  return storedFormat === "A3" || storedFormat === "A5" ? storedFormat : "A4";
-}
-
-function NumberControl({
-  label,
-  value,
-  max,
-  iconSrc,
-  onChange,
-  onIncrease,
-  onDecrease,
-  onMaxChange,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  iconSrc?: string;
-  onChange: (value: number) => void;
-  onIncrease?: () => void;
-  onDecrease?: () => void;
-  onMaxChange?: (value: number) => void;
-}) {
-  const increase = onIncrease || (() => onChange(Math.min(Math.max(0, max), Math.max(0, value + 1))));
-  const decrease = onDecrease || (() => onChange(Math.max(0, value - 1)));
-  return (
-    <div className="number-control">
-      <span className="number-label">
-        {iconSrc && <img className="resource-medallion" src={iconSrc} width={28} height={28} loading="eager" decoding="async" alt="" />}
-        <span>{label}</span>
-      </span>
-      <button type="button" onClick={decrease} aria-label={`Reduzir ${label}`}>−</button>
-      <strong>{value}</strong>
-      <small>/</small>
-      {onMaxChange ? (
-        <>
-          <input
-          className="number-max"
-          type="number"
-          min={0}
-          value={Math.max(0, max)}
-          aria-label={`Máximo ${label}`}
-          onFocus={(event) => event.currentTarget.select()}
-          onChange={(event) => onMaxChange(Math.max(0, Number(event.target.value)))}
-          />
-          <span className="number-max-print print-only">{Math.max(0, max)}</span>
-        </>
-      ) : <small>{max}</small>}
-      <button type="button" onClick={increase} aria-label={`Aumentar ${label}`}>+</button>
-    </div>
-  );
-}
-
-function ResourceBar({
-  value,
-  max,
-  color,
-  temp,
-  label,
-  onChange,
-  kind,
-}: {
-  value: number;
-  max: number;
-  color: string;
-  temp?: number;
-  label?: string;
-  onChange?: (value: number) => void;
-  kind?: "health" | "mana" | "divine";
-}) {
-  const safeMax = Math.max(0, max);
-  const safeValue = Math.min(Math.max(0, value), safeMax);
-  const percent = safeMax > 0 ? Math.min(100, (safeValue / safeMax) * 100) : 0;
-  const tempPercent = safeMax > 0 ? Math.min(100, (Math.max(0, temp || 0) / safeMax) * 100) : 0;
-  return (
-    <div className={`bar-group ${onChange ? "is-adjustable" : ""}`}>
-      <div className={`meter meter-${kind || "resource"}`}>
-        <span style={{ width: `${percent}%`, background: color }} />
-        {onChange && (
-          <input
-            type="range"
-            min={0}
-            max={safeMax}
-            value={safeValue}
-            aria-label={`Ajustar ${label || "recurso"}`}
-            onInput={(event) => onChange(Math.min(safeMax, Math.max(0, Number(event.currentTarget.value))))}
-          />
-        )}
-      </div>
-      {temp !== undefined && (
-        <div className="temp-meter">
-          <span className="temp-label"><img className="resource-inline-medallion" src={ASSETS.stats.temporaryHp.src} width={18} height={18} loading="eager" decoding="async" alt="" />PV temporário</span>
-          <div><i style={{ width: `${tempPercent}%` }} /></div>
-          <b>+{temp}</b>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function prepareAvatar(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    if (!file.type.startsWith("image/")) {
-      reject(new Error("Selecione um arquivo de imagem."));
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      reject(new Error("A imagem deve ter no máximo 10 MB."));
-      return;
-    }
-
-    const source = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      const size = 512;
-      const scale = Math.max(size / image.width, size / image.height);
-      const width = image.width * scale;
-      const height = image.height * scale;
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const context = canvas.getContext("2d");
-      if (!context) {
-        URL.revokeObjectURL(source);
-        reject(new Error("Não foi possível processar a imagem."));
-        return;
-      }
-      context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
-      URL.revokeObjectURL(source);
-      resolve(canvas.toDataURL("image/jpeg", 0.82));
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(source);
-      reject(new Error("Não foi possível abrir a imagem."));
-    };
-    image.src = source;
-  });
-}
-
-function AbilityEditor({
-  ability,
-  onUpdate,
-  onRemove,
-  forceOpen,
-}: {
-  ability: Ability;
-  onUpdate: (ability: Ability) => void;
-  onRemove: () => void;
-  forceOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(!ability.name);
-  useEffect(() => {
-    if (forceOpen !== undefined) setOpen(forceOpen);
-  }, [forceOpen]);
-  const update = (key: keyof Ability, value: string | number) => onUpdate({ ...ability, [key]: value });
-  return (
-    <div className="ability-unit">
-      <details className="ability-card" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
-        <summary>
-          <span className="ability-rank">{ability.rank || "—"}</span>
-          <span>
-            <strong>{ability.name || "Nova habilidade"}</strong>
-            <small>Nível {ability.level || 1} · {ability.activation || "Ativação não definida"}</small>
-          </span>
-          <span className="ability-cost">{ability.cost || "Sem custo"}</span>
-          <span className="disclosure">+</span>
-        </summary>
-        <div className="ability-editor">
-          <label className="span-2">Nome<input value={ability.name} onChange={(event) => update("name", event.target.value)} /></label>
-          <label>Nível<input type="number" min={1} value={ability.level} onChange={(event) => update("level", Number(event.target.value))} /></label>
-          <label>Rank<input value={ability.rank} onChange={(event) => update("rank", event.target.value)} /></label>
-          <label>Custo<input value={ability.cost} onChange={(event) => update("cost", event.target.value)} /></label>
-          <label>Ativação<input value={ability.activation} onChange={(event) => update("activation", event.target.value)} /></label>
-          <label>Alcance<input value={ability.range} onChange={(event) => update("range", event.target.value)} /></label>
-          <label>Duração<input value={ability.duration} onChange={(event) => update("duration", event.target.value)} /></label>
-          <label>Recarga<input value={ability.recharge} onChange={(event) => update("recharge", event.target.value)} /></label>
-          <label className="span-full">Descrição<textarea value={ability.description} onChange={(event) => update("description", event.target.value)} /></label>
-          <button type="button" className="remove-action" onClick={onRemove}>Remover habilidade</button>
-        </div>
-      </details>
-      <div className="ability-print print-only">
-        <div className="print-meta">
-          {ability.range && <span>Alcance {ability.range}</span>}
-          {ability.duration && <span>Duração {ability.duration}</span>}
-          {ability.recharge && <span>Recarga {ability.recharge}</span>}
-        </div>
-        {ability.description && <p>{ability.description}</p>}
-      </div>
-    </div>
-  );
-}
-
-function AbilityReadOnly({ ability }: { ability: Ability }) {
-  const fields = [
-    ["Nível", ability.level || 1],
-    ["Rank", ability.rank || "—"],
-    ["Custo", formatCostValue(ability.cost) || "—"],
-    ["Ação", ability.activation || "Não definida"],
-    ["Alcance", ability.range || "—"],
-    ["Duração", ability.duration || "—"],
-    ["Recarga", ability.recharge || "—"],
-  ];
-  return (
-    <div className="ability-readonly" aria-label={`Detalhes de ${ability.name || "habilidade"}`}>
-      <div className="ability-detail-grid">
-        {fields.map(([label, value]) => <div key={String(label)}><span>{label}</span><strong>{value}</strong></div>)}
-      </div>
-      <div className="ability-rules"><span>Descrição</span><p>{ability.description || "Nenhuma regra ou descrição registrada."}</p></div>
-      {ability.notes && <div className="ability-rules"><span>Observações</span><p>{ability.notes}</p></div>}
-    </div>
-  );
-}
-
-function AbilityCard({
-  ability,
-  category,
-  onUpdate,
-  onRemove,
-  forceOpen,
-}: {
-  ability: Ability;
-  category: AbilityCategory;
-  onUpdate: (ability: Ability) => void;
-  onRemove: () => void;
-  forceOpen?: boolean;
-}) {
-  const [mode, setMode] = useState<"compact" | "details" | "edit">(!ability.name ? "edit" : "compact");
-  useEffect(() => {
-    if (forceOpen !== undefined) setMode(forceOpen ? "details" : "compact");
-  }, [forceOpen]);
-  const update = (key: keyof Ability, value: string | number) => onUpdate({ ...ability, [key]: value });
-  const remove = () => {
-    if (window.confirm(`Remover ${ability.name || "esta habilidade"}?`)) onRemove();
-  };
-  return (
-    <div className="ability-unit ability-card-shell">
-      <div className="ability-card-row">
-        <span className="ability-rank">{ability.rank || "—"}</span>
-        <button type="button" className="ability-card-toggle" onClick={() => setMode(mode === "details" ? "compact" : "details")} aria-expanded={mode === "details"}>
-          <strong>{ability.name || "Nova habilidade"}</strong>
-          <small>Nível {ability.level || 1} · {ability.activation || "Ativação não definida"}</small>
-        </button>
-        <span className="ability-cost">{formatCostValue(ability.cost) || "—"}</span>
-        <div className="ability-card-actions">
-          <button type="button" className="ability-details-toggle" onClick={() => setMode(mode === "details" ? "compact" : "details")} aria-expanded={mode === "details"}>{mode === "details" ? "Fechar" : "Ver detalhes"}</button>
-          <button type="button" className="ability-edit-link" onClick={() => setMode("edit")}>Editar</button>
-        </div>
-      </div>
-      {mode === "details" && (
-        <div className="ability-detail-panel">
-          <AbilityReadOnly ability={ability} />
-          <button type="button" className="ability-edit-link" onClick={() => setMode("edit")}>Editar esta habilidade</button>
-        </div>
-      )}
-      {mode === "edit" && (
-        <div className="ability-editor" aria-label={`Editar ${ability.name || "habilidade"}`}>
-          <label className="span-2">Nome<input value={ability.name} onChange={(event) => update("name", event.target.value)} /></label>
-          <label>Nível<input type="number" min={1} value={ability.level} onChange={(event) => update("level", Number(event.target.value))} /></label>
-          <label>Rank<input value={ability.rank} onChange={(event) => update("rank", event.target.value)} /></label>
-          <label>Custo<input value={ability.cost} onChange={(event) => update("cost", event.target.value)} /></label>
-          <label>Ativação<input value={ability.activation} onChange={(event) => update("activation", event.target.value)} /></label>
-          <label>Alcance<input value={ability.range} onChange={(event) => update("range", event.target.value)} /></label>
-          <label>Duração<input value={ability.duration} onChange={(event) => update("duration", event.target.value)} /></label>
-          <label>Recarga<input value={ability.recharge} onChange={(event) => update("recharge", event.target.value)} /></label>
-          <label className="span-full">Descrição<textarea value={ability.description} onChange={(event) => update("description", event.target.value)} /></label>
-          <div className="ability-editor-actions">
-            <button type="button" className="ability-save-link" onClick={() => setMode("details")}>Concluir edição</button>
-            <button type="button" className="remove-action" onClick={remove}>Remover habilidade</button>
-          </div>
-        </div>
-      )}
-      <div className="ability-print print-only">
-        <header className="ability-print-heading">
-          <strong className="ability-print-name">{ability.name || "Habilidade sem nome"}</strong>
-          <span>{ABILITY_META[category].title} · Nível {ability.level || 1}{ability.rank ? ` · Rank ${ability.rank}` : ""}</span>
-        </header>
-        <div className="print-meta">
-          {formatCostLabel(ability.cost) && <span>{formatCostLabel(ability.cost)}</span>}
-          {formatActivationLabel(ability.activation) && <span>{formatActivationLabel(ability.activation)}</span>}
-          {ability.range && <span>Alcance: {ability.range}</span>}
-          {ability.duration && <span>Duração: {ability.duration}</span>}
-          {ability.recharge && <span>Recarga: {ability.recharge}</span>}
-        </div>
-        {ability.description && <p>{ability.description}</p>}
-        {ability.notes && <p><strong>Observações:</strong> {ability.notes}</p>}
-      </div>
-    </div>
-  );
-}
-
-function AbilitySection({
-  category,
-  items,
-  onChange,
-  search,
-  actionFilter,
-  categoryFilter,
-  expandAll,
-}: {
-  category: AbilityCategory;
-  items: Ability[];
-  onChange: (items: Ability[]) => void;
-  search: string;
-  actionFilter: string;
-  categoryFilter: string;
-  expandAll: boolean | undefined;
-}) {
-  if (categoryFilter !== "Todas" && categoryFilter !== category) return null;
-  const meta = ABILITY_META[category];
-  const normalizedSearch = search.trim().toLocaleLowerCase();
-  const visibleItems = items.filter((item) => {
-    const haystack = [item.name, item.rank, item.activation, item.cost, item.description, item.range, item.duration, item.recharge, item.notes].join(" ").toLocaleLowerCase();
-    return (!normalizedSearch || haystack.includes(normalizedSearch)) && (!actionFilter || item.activation === actionFilter);
-  });
-  const add = () =>
-    onChange([
-      ...items,
-      {
-        id: makeId(category),
-        name: "",
-        level: 1,
-        rank: "",
-        cost: "",
-        activation: "",
-        range: "",
-        duration: "",
-        recharge: "",
-        description: "",
-      },
-    ]);
-
-  return (
-    <section className={`ability-category category-${category}`}>
-      <div className="category-heading">
-        <div>
-          <h3><img className="section-medallion" src={ABILITY_SECTION_ASSETS[category].src} width={30} height={30} loading="lazy" decoding="async" alt="" />{meta.title}</h3>
-          <small>{meta.description}</small>
-        </div>
-        <span title={visibleItems.length === items.length ? undefined : `${visibleItems.length} visíveis de ${items.length}`}>{visibleItems.length === items.length ? items.length : `${visibleItems.length}/${items.length}`}</span>
-        <button type="button" onClick={add}>Adicionar</button>
-      </div>
-      <div className="ability-list">
-        {items.length === 0 && <p className="empty-state"><img src={ABILITY_SECTION_ASSETS[category].src} width={34} height={34} loading="lazy" decoding="async" alt="" />Vazio. Adicione a primeira entrada nesta categoria.</p>}
-        {items.length > 0 && visibleItems.length === 0 && <p className="empty-state">Nenhuma entrada corresponde aos filtros atuais.</p>}
-        {visibleItems.map((item) => (
-          <AbilityCard
-            key={item.id}
-            ability={item}
-            category={category}
-            forceOpen={expandAll}
-            onUpdate={(updated) => onChange(items.map((current) => current.id === item.id ? updated : current))}
-            onRemove={() => onChange(items.filter((current) => current.id !== item.id))}
-          />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function FiliationSignatureSection({
-  filiationName,
-  items,
-  onChange,
-  onResourceChange,
-}: {
-  filiationName: string;
-  items: FiliationSignatureState[];
-  onChange: (items: FiliationSignatureState[]) => void;
-  onResourceChange?: (value: number) => void;
-}) {
-  const updateItem = (id: string, updated: FiliationSignatureState) => {
-    onChange(items.map((item) => item.id === id ? updated : item));
-  };
-  const addCustom = () => {
-    const id = makeId("signature");
-    onChange([
-      ...items,
-      {
-        id,
-        sourceId: id,
-        title: "",
-        rules: "",
-        selectedOptions: {},
-        notes: "",
-        custom: true,
-      },
-    ]);
-  };
-
-  return (
-    <section className="filiation-signature-section ability-category">
-      <div className="category-heading">
-        <div>
-          <h3>Assinatura da filiação</h3>
-        </div>
-        <span>{items.length}</span>
-        <button type="button" onClick={addCustom} disabled={!filiationName}>Personalizar</button>
-      </div>
-      <div className="signature-list">
-        {!filiationName && <p className="empty-state">Escolha uma filiação para revelar sua assinatura.</p>}
-        {filiationName && items.length === 0 && <p className="empty-state">Nenhuma assinatura registrada.</p>}
-        {items.map((item) => {
-          const definition = signatureDefinition(item);
-          const choices = definition?.choices || [];
-          const resource = item.resource;
-          const moves = item.moves || [];
-          const officialRules = item.officialSnapshot?.rules || item.rules;
-          const restoreOfficial = () => {
-            if (!definition) return;
-            const official = makeOfficialState(definition, filiationName);
-            updateItem(item.id, { ...official, id: item.id });
-          };
-          return (
-            <article className={`signature-card ${item.custom ? "is-custom" : "is-official"}`} key={item.id}>
-              <details className="signature-disclosure" open={item.custom || undefined}>
-                <summary className="signature-summary">
-                  <span aria-hidden="true">{item.custom ? "+" : "Σ"}</span>
-                  <span><strong>{item.title || "Assinatura sem nome"}</strong><small>{item.custom ? "Personalizada" : filiationName}{resource ? ` · ${resource.name} ${resource.current}/${resource.max}` : ""}</small></span>
-                  <span className="signature-summary-meta">{moves.length} {moves.length === 1 ? "efeito" : "efeitos"}</span>
-                  <span className="disclosure">+</span>
-                </summary>
-                <div className="signature-screen">
-                  <div className="signature-structured-grid">
-                    <label>Nome<input value={item.title} onChange={(event) => updateItem(item.id, { ...item, title: event.target.value })} /></label>
-                    <label className="span-full">Resumo<textarea value={item.summary || item.rules} onChange={(event) => updateItem(item.id, { ...item, summary: event.target.value, rules: event.target.value })} /></label>
-                    {resource && (
-                      <fieldset className="signature-resource span-full">
-                        <legend>Recurso ou medidor</legend>
-                        <label>Nome<input value={resource.name} onChange={(event) => updateItem(item.id, { ...item, resource: { ...resource, name: event.target.value } })} /></label>
-                        <label>Atual<input type="number" min={0} value={resource.current} onChange={(event) => { const current = Math.max(0, Number(event.target.value)); updateItem(item.id, { ...item, resource: { ...resource, current } }); onResourceChange?.(current); }} /></label>
-                        <label>Máximo<input type="number" min={0} value={resource.max} onChange={(event) => updateItem(item.id, { ...item, resource: { ...resource, max: Math.max(0, Number(event.target.value)) } })} /></label>
-                        <label>Unidade<input value={resource.unit} onChange={(event) => updateItem(item.id, { ...item, resource: { ...resource, unit: event.target.value } })} /></label>
-                      </fieldset>
-                    )}
-                    <label>Ganho e recuperação<textarea value={item.recovery || ""} placeholder="Gatilhos, descanso e recuperação" onChange={(event) => updateItem(item.id, { ...item, recovery: event.target.value })} /></label>
-                    <label>Custos e consumos<textarea value={item.costs || ""} placeholder="Custos, limites e consumos" onChange={(event) => updateItem(item.id, { ...item, costs: event.target.value })} /></label>
-                  </div>
-
-                  <div className="signature-moves">
-                    <div className="signature-subheading"><strong>Efeitos e manobras</strong><button type="button" onClick={() => updateItem(item.id, { ...item, moves: [...moves, { id: makeId("signature-move"), name: "", cost: "", activation: "", description: "" }] })}>Adicionar linha</button></div>
-                    {moves.length === 0 && <p className="empty-state">Nenhuma linha estruturada. Adicione uma manobra ou mantenha a referência oficial abaixo.</p>}
-                    {moves.map((move, moveIndex) => (
-                      <div className="signature-move-row" key={move.id}>
-                        <label>Nome<input value={move.name} onChange={(event) => updateItem(item.id, { ...item, moves: moves.map((current) => current.id === move.id ? { ...current, name: event.target.value } : current) })} /></label>
-                        <label>Custo<input value={move.cost} onChange={(event) => updateItem(item.id, { ...item, moves: moves.map((current) => current.id === move.id ? { ...current, cost: event.target.value } : current) })} /></label>
-                        <label>Ação<input value={move.activation} onChange={(event) => updateItem(item.id, { ...item, moves: moves.map((current) => current.id === move.id ? { ...current, activation: event.target.value } : current) })} /></label>
-                        <label className="span-2">Descrição<textarea value={move.description} onChange={(event) => updateItem(item.id, { ...item, moves: moves.map((current) => current.id === move.id ? { ...current, description: event.target.value } : current) })} /></label>
-                        <div className="signature-move-actions">
-                          <button type="button" onClick={() => updateItem(item.id, { ...item, moves: moveIndex === 0 ? moves : moves.map((current, index) => index === moveIndex - 1 ? moves[moveIndex] : index === moveIndex ? moves[moveIndex - 1] : current) })} disabled={moveIndex === 0} aria-label="Mover linha para cima">↑</button>
-                          <button type="button" onClick={() => updateItem(item.id, { ...item, moves: moveIndex === moves.length - 1 ? moves : moves.map((current, index) => index === moveIndex ? moves[moveIndex + 1] : index === moveIndex + 1 ? moves[moveIndex] : current) })} disabled={moveIndex === moves.length - 1} aria-label="Mover linha para baixo">↓</button>
-                          <button type="button" className="remove-action" onClick={() => updateItem(item.id, { ...item, moves: moves.filter((current) => current.id !== move.id) })}>Remover</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {choices.length > 0 && (
-                    <div className="signature-choices">
-                      {choices.map((choice) => (
-                        <label key={choice.id}><span>{choice.label}</span><select value={item.selectedOptions[choice.id] || choice.defaultValue} onChange={(event) => updateItem(item.id, { ...item, selectedOptions: { ...item.selectedOptions, [choice.id]: event.target.value } })}>{choice.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-                      ))}
-                    </div>
-                  )}
-                  <details className="signature-reference"><summary>Referência oficial · página {item.officialSnapshot?.pdfPage || definition?.source.pdfPage || "—"}</summary><p>{officialRules || "Nenhuma referência oficial registrada."}</p></details>
-                  <label className="signature-notes"><span>Observações da ficha</span><textarea value={item.notes} placeholder="Uso atual, alvos, cargas ou lembretes" onChange={(event) => updateItem(item.id, { ...item, notes: event.target.value })} /></label>
-                  <div className="signature-footer-actions">
-                    <button type="button" className="signature-restore" onClick={restoreOfficial} disabled={!definition}>Restaurar oficial</button>
-                    {item.custom && <button type="button" className="remove-action" onClick={() => onChange(items.filter((current) => current.id !== item.id))}>Remover assinatura</button>}
-                  </div>
-                </div>
-              </details>
-              <div className="signature-print print-only">
-                <header><strong>{item.title || "Assinatura personalizada"}</strong><span>{item.custom ? "Personalizada" : filiationName}</span></header>
-                {item.officialSnapshot?.rules && <p><strong>Referência oficial:</strong> {item.officialSnapshot.rules}</p>}
-                {item.summary && <p><strong>Resumo:</strong> {item.summary}</p>}
-                {item.resource && <dl><div><dt>Recurso</dt><dd>{item.resource.name} {item.resource.current}/{item.resource.max} {item.resource.unit}</dd></div></dl>}
-                {item.recovery && <p><strong>Ganho e recuperação:</strong> {item.recovery}</p>}
-                {item.costs && <p><strong>Custos:</strong> {item.costs}</p>}
-                {item.moves?.length ? <dl>{item.moves.map((move) => <div key={move.id}><dt>{move.name}</dt><dd>{[formatCostLabel(move.cost, resource?.name), formatActivationLabel(move.activation), move.description].filter(Boolean).join(" · ")}</dd></div>)}</dl> : null}
-                {choices.length > 0 && (
-                  <dl>
-                    {choices.map((choice) => {
-                      const selected = item.selectedOptions[choice.id] || choice.defaultValue;
-                      const label = choice.options.find((option) => option.value === selected)?.label || selected;
-                      return <div key={choice.id}><dt>{choice.label}</dt><dd>{label}</dd></div>;
-                    })}
-                  </dl>
-                )}
-                {item.notes && <p className="signature-print-notes"><strong>Notas:</strong> {item.notes}</p>}
-              </div>
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function SignatureReadOnly({
-  item,
-  filiationName,
-  onEdit,
-  onRemove,
-}: {
-  item: FiliationSignatureState;
-  filiationName: string;
-  onEdit: () => void;
-  onRemove?: () => void;
-}) {
-  const definition = signatureDefinition(item);
-  const choices = definition?.choices || [];
-  const resource = item.resource;
-  const moves = item.moves || [];
-  const officialRules = item.officialSnapshot?.rules || item.rules;
-  const resourceMax = Math.max(0, resource?.max || 0);
-  const resourceCurrent = Math.min(resourceMax, Math.max(0, resource?.current || 0));
-  return (
-    <div className="signature-readonly">
-      <header className="signature-readonly-head">
-        <div>
-          <span className="signature-kicker">{item.custom ? "Registro personalizado" : filiationName}</span>
-          <h4>{item.title || "Assinatura sem nome"}</h4>
-          <p>{item.summary || item.rules || "Nenhum resumo registrado. Abra Editar assinatura para preencher."}</p>
-        </div>
-        <div className="signature-readonly-actions">
-          <button type="button" className="ability-edit-link" onClick={onEdit}>Editar assinatura</button>
-          {onRemove && <button type="button" className="remove-action" onClick={onRemove}>Remover</button>}
-        </div>
-      </header>
-      {resource && (
-        <div className="signature-resource-readonly">
-          <div><span>{resource.name || "Recurso"}</span><strong>{resourceCurrent}/{resourceMax} <small>{resource.unit}</small></strong></div>
-          <div className="signature-resource-meter" role="progressbar" aria-valuemin={0} aria-valuemax={resourceMax} aria-valuenow={resourceCurrent}><i style={{ width: `${resourceMax ? (resourceCurrent / resourceMax) * 100 : 0}%` }} /></div>
-        </div>
-      )}
-      <div className="signature-detail-grid">
-        {item.recovery && <div><span>Ganho e recuperação</span><p>{item.recovery}</p></div>}
-        {item.costs && <div><span>Custos e consumos</span><p>{item.costs}</p></div>}
-      </div>
-      <section className="signature-effects-readonly">
-        <div className="signature-subheading"><strong>Efeitos e manobras</strong><span>{moves.length}</span></div>
-        {moves.length ? moves.map((move) => (
-          <article key={move.id}>
-            <div><strong>{move.name || "Efeito sem nome"}</strong><span>{[formatCostLabel(move.cost, resource?.name), formatActivationLabel(move.activation)].filter(Boolean).join(" · ")}</span></div>
-            <p>{move.description || "Sem descrição."}</p>
-          </article>
-        )) : <p className="empty-state">Nenhum efeito estruturado. A referência oficial continua disponível abaixo.</p>}
-      </section>
-      {choices.length > 0 && (
-        <section className="signature-choices-readonly"><span>Escolhas</span>{choices.map((choice) => {
-          const selected = item.selectedOptions[choice.id] || choice.defaultValue;
-          const label = choice.options.find((option) => option.value === selected)?.label || selected;
-          return <div key={choice.id}><strong>{choice.label}</strong><p>{label}</p></div>;
-        })}</section>
-      )}
-      <details className="signature-reference-readonly"><summary>Referência oficial · página {item.officialSnapshot?.pdfPage || definition?.source.pdfPage || "—"}</summary><p>{officialRules || "Nenhuma referência oficial registrada."}</p></details>
-      {item.notes && <div className="signature-notes-readonly"><span>Observações da ficha</span><p>{item.notes}</p></div>}
-    </div>
-  );
-}
-
-function SignatureEditor({
-  item,
-  filiationName,
-  onSave,
-  onCancel,
-  onRestore,
-}: {
-  item: FiliationSignatureState;
-  filiationName: string;
-  onSave: (item: FiliationSignatureState) => void;
-  onCancel: () => void;
-  onRestore: (item: FiliationSignatureState) => FiliationSignatureState;
-}) {
-  const [draft, setDraft] = useState<FiliationSignatureState>(() => ({ ...item, selectedOptions: { ...item.selectedOptions }, moves: item.moves?.map((move) => ({ ...move })), resource: item.resource ? { ...item.resource } : undefined }));
-  const definition = signatureDefinition(draft);
-  const choices = definition?.choices || [];
-  const moves = draft.moves || [];
-  const update = (changes: Partial<FiliationSignatureState>) => setDraft((current) => ({ ...current, ...changes }));
-  const updateMove = (id: string, changes: Partial<NonNullable<FiliationSignatureState["moves"]>[number]>) => update({ moves: moves.map((move) => move.id === id ? { ...move, ...changes } : move) });
-  const swapMove = (index: number, next: number) => {
-    if (next < 0 || next >= moves.length) return;
-    const reordered = [...moves];
-    [reordered[index], reordered[next]] = [reordered[next], reordered[index]];
-    update({ moves: reordered });
-  };
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onCancel(); };
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", closeOnEscape);
-    return () => { document.body.style.overflow = previousOverflow; window.removeEventListener("keydown", closeOnEscape); };
-  }, [onCancel]);
-  return createPortal((
-    <div className="signature-editor-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel(); }}>
-      <section className="signature-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="signature-editor-title">
-        <header className="signature-editor-header">
-          <div><span>Editor da assinatura</span><h3 id="signature-editor-title">{draft.title || "Nova assinatura"}</h3><small>{filiationName || "Filiação não definida"}</small></div>
-          <div className="signature-editor-actions"><button type="button" onClick={onCancel}>Cancelar</button><button type="button" className="primary-action" onClick={() => onSave(draft)}>Salvar alterações</button></div>
-        </header>
-        <div className="signature-editor-body">
-          <div className="signature-structured-grid">
-            <label>Nome<input value={draft.title} onChange={(event) => update({ title: event.target.value })} /></label>
-            <label className="span-full">Resumo<textarea value={draft.summary || draft.rules} onChange={(event) => update({ summary: event.target.value, rules: event.target.value })} /></label>
-            <label>Ganho e recuperação<textarea value={draft.recovery || ""} placeholder="Gatilhos, descanso e recuperação" onChange={(event) => update({ recovery: event.target.value })} /></label>
-            <label>Custos e consumos<textarea value={draft.costs || ""} placeholder="Custos, limites e consumos" onChange={(event) => update({ costs: event.target.value })} /></label>
-          </div>
-          <fieldset className="signature-resource-editor">
-            <legend>Recurso ou medidor</legend>
-            {!draft.resource && <button type="button" className="secondary-action" onClick={() => update({ resource: { name: "Recurso", current: 0, max: 0, unit: "cargas" } })}>Adicionar medidor</button>}
-            {draft.resource && <div className="signature-resource"><label>Nome<input value={draft.resource.name} onChange={(event) => update({ resource: { ...draft.resource!, name: event.target.value } })} /></label><label>Atual<input type="number" min={0} value={draft.resource.current} onChange={(event) => update({ resource: { ...draft.resource!, current: Math.max(0, Number(event.target.value)) } })} /></label><label>Máximo<input type="number" min={0} value={draft.resource.max} onChange={(event) => { const max = Math.max(0, Number(event.target.value)); update({ resource: { ...draft.resource!, max, current: Math.min(max, Math.max(0, draft.resource!.current)) } }); }} /></label><label>Unidade<input value={draft.resource.unit} onChange={(event) => update({ resource: { ...draft.resource!, unit: event.target.value } })} /></label><button type="button" className="remove-action" onClick={() => update({ resource: undefined })}>Remover medidor</button></div>}
-          </fieldset>
-          <section className="signature-moves signature-editor-moves">
-            <div className="signature-subheading"><div><strong>Efeitos e manobras</strong><small>Linhas independentes, mostradas de forma compacta na ficha.</small></div><button type="button" className="secondary-action" onClick={() => update({ moves: [...moves, { id: makeId("signature-move"), name: "", cost: "", activation: "", description: "" }] })}>Adicionar linha</button></div>
-            {moves.map((move, index) => <div className="signature-move-row" key={move.id}><label>Nome<input value={move.name} onChange={(event) => updateMove(move.id, { name: event.target.value })} /></label><label>Custo<input value={move.cost} onChange={(event) => updateMove(move.id, { cost: event.target.value })} /></label><label>Ação<input value={move.activation} onChange={(event) => updateMove(move.id, { activation: event.target.value })} /></label><label className="span-2">Descrição<textarea value={move.description} onChange={(event) => updateMove(move.id, { description: event.target.value })} /></label><div className="signature-move-actions"><button type="button" onClick={() => swapMove(index, index - 1)} disabled={index === 0} aria-label="Mover linha para cima">↑</button><button type="button" onClick={() => swapMove(index, index + 1)} disabled={index === moves.length - 1} aria-label="Mover linha para baixo">↓</button><button type="button" className="remove-action" onClick={() => update({ moves: moves.filter((current) => current.id !== move.id) })}>Remover</button></div></div>)}
-            {!moves.length && <p className="empty-state">Nenhuma linha personalizada. A referência oficial não será perdida.</p>}
-          </section>
-          {choices.length > 0 && <div className="signature-choices">{choices.map((choice) => <label key={choice.id}><span>{choice.label}</span><select value={draft.selectedOptions[choice.id] || choice.defaultValue} onChange={(event) => update({ selectedOptions: { ...draft.selectedOptions, [choice.id]: event.target.value } })}>{choice.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>)}</div>}
-          <details className="signature-reference"><summary>Referência oficial · página {draft.officialSnapshot?.pdfPage || definition?.source.pdfPage || "—"}</summary><p>{draft.officialSnapshot?.rules || draft.rules || "Nenhuma referência oficial registrada."}</p></details>
-          <label className="signature-notes"><span>Observações da ficha</span><textarea value={draft.notes} placeholder="Uso atual, alvos, cargas ou lembretes" onChange={(event) => update({ notes: event.target.value })} /></label>
-          <div className="signature-editor-footer"><button type="button" className="signature-restore" onClick={() => setDraft(onRestore(draft))} disabled={!definition}>Restaurar oficial</button><span>O snapshot oficial permanece salvo no JSON.</span></div>
-        </div>
-      </section>
-    </div>
-  ), document.body);
-}
-
-function SignatureCard({
-  item,
-  filiationName,
-  onEdit,
-  onRemove,
-}: {
-  item: FiliationSignatureState;
-  filiationName: string;
-  onEdit: () => void;
-  onRemove?: () => void;
-}) {
-  const [open, setOpen] = useState(Boolean(item.custom));
-  const definition = signatureDefinition(item);
-  const resource = item.resource;
-  const moves = item.moves || [];
-  const panelId = `signature-details-${item.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
-  return (
-    <article className={`signature-card ${item.custom ? "is-custom" : "is-official"}`}>
-      <details className="signature-disclosure" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
-        <summary
-          className="signature-summary"
-          aria-controls={panelId}
-          aria-expanded={open}
-          aria-label={open ? "Fechar detalhes da assinatura" : "Ver detalhes da assinatura"}
-        >
-          <span className="signature-mark" aria-hidden="true"><img src={filiationSeal(filiationName).src} width={34} height={34} loading="lazy" decoding="async" alt="" /></span>
-          <span><strong>{item.title || "Assinatura sem nome"}</strong><small>{item.custom ? "Personalizada" : filiationName}{resource ? ` · ${resource.name} ${resource.current}/${resource.max}` : ""}</small></span>
-          <span className="signature-summary-meta">{moves.length} {moves.length === 1 ? "efeito" : "efeitos"}</span>
-          <span className="disclosure-label" data-open={open}>{open ? "Fechar detalhes" : "Ver detalhes"}</span>
-        </summary>
-        <div id={panelId}>
-          <SignatureReadOnly item={item} filiationName={filiationName} onEdit={onEdit} onRemove={onRemove} />
-        </div>
-      </details>
-      <div className="signature-print print-only">
-        <header><strong>{item.title || "Assinatura personalizada"}</strong><span>{item.custom ? "Personalizada" : filiationName}</span></header>
-        {item.officialSnapshot?.rules && <p><strong>Referência oficial:</strong> {item.officialSnapshot.rules}</p>}
-        {item.summary && <p><strong>Resumo:</strong> {item.summary}</p>}
-        {resource && <dl><div><dt>Recurso</dt><dd>{resource.name} {resource.current}/{resource.max} {resource.unit}</dd></div></dl>}
-        {item.recovery && <p><strong>Ganho e recuperação:</strong> {item.recovery}</p>}
-        {item.costs && <p><strong>Custos:</strong> {item.costs}</p>}
-        {moves.length ? <dl>{moves.map((move) => <div key={move.id}><dt>{move.name}</dt><dd>{[formatCostLabel(move.cost, resource?.name), formatActivationLabel(move.activation), move.description].filter(Boolean).join(" · ")}</dd></div>)}</dl> : null}
-        {definition?.choices?.length ? <dl>{definition.choices.map((choice) => { const selected = item.selectedOptions[choice.id] || choice.defaultValue; return <div key={choice.id}><dt>{choice.label}</dt><dd>{choice.options.find((option) => option.value === selected)?.label || selected}</dd></div>; })}</dl> : null}
-        {item.notes && <p><strong>Notas:</strong> {item.notes}</p>}
-      </div>
-    </article>
-  );
-}
-
-function SignatureWorkspace({
-  filiationName,
-  items,
-  onChange,
-  onResourceChange,
-}: {
-  filiationName: string;
-  items: FiliationSignatureState[];
-  onChange: (items: FiliationSignatureState[]) => void;
-  onResourceChange?: (value: number) => void;
-}) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const editingItem = items.find((item) => item.id === editingId);
-  const updateItem = (id: string, updated: FiliationSignatureState) => onChange(items.map((item) => item.id === id ? updated : item));
-  const addCustom = () => {
-    const id = makeId("signature");
-    const item: FiliationSignatureState = { id, sourceId: id, title: "", rules: "", selectedOptions: {}, notes: "", custom: true, summary: "", moves: [] };
-    onChange([...items, item]);
-    setEditingId(id);
-  };
-  const save = (updated: FiliationSignatureState) => {
-    updateItem(updated.id, updated);
-    if (updated.resource) onResourceChange?.(Math.min(Math.max(0, updated.resource.current), Math.max(0, updated.resource.max)));
-    setEditingId(null);
-  };
-  const restore = (item: FiliationSignatureState) => {
-    const definition = signatureDefinition(item);
-    return definition ? { ...makeOfficialState(definition, filiationName), id: item.id } : item;
-  };
-  return (
-    <section className="filiation-signature-section ability-category">
-      <div className="category-heading"><div><h3><img className="section-medallion" src={ASSETS.sections.signature.src} width={30} height={30} loading="lazy" decoding="async" alt="" />Assinatura da filiação</h3><small>Regras centrais e recurso próprio da divindade.</small></div><span>{items.length}</span><button type="button" onClick={addCustom} disabled={!filiationName}>Adicionar assinatura</button></div>
-      <div className="signature-list">
-        {!filiationName && <p className="empty-state">Escolha uma filiação para revelar sua assinatura.</p>}
-        {filiationName && !items.length && <p className="empty-state">Nenhuma assinatura registrada.</p>}
-        {items.map((item) => <SignatureCard
-          key={item.id}
-          item={item}
-          filiationName={filiationName}
-          onEdit={() => setEditingId(item.id)}
-          onRemove={item.custom ? () => { if (window.confirm("Remover esta assinatura personalizada?")) onChange(items.filter((current) => current.id !== item.id)); } : undefined}
-        />)}
-      </div>
-      {editingItem && <SignatureEditor item={editingItem} filiationName={filiationName} onSave={save} onCancel={() => setEditingId(null)} onRestore={restore} />}
-    </section>
-  );
-}
-
-function EquipmentEditor({
-  item,
-  onUpdate,
-  onRemove,
-}: {
-  item: Equipment;
-  onUpdate: (item: Equipment) => void;
-  onRemove: () => void;
-}) {
-  const update = <K extends keyof Equipment>(key: K, value: Equipment[K]) => onUpdate({ ...item, [key]: value });
-  return (
-    <details className={`equipment-item ${item.equipped ? "is-equipped" : ""}`}>
-      <summary>
-        <span className="equipment-symbol"><img src={equipmentAsset(item.type).src} width={30} height={30} loading="lazy" decoding="async" alt="" /></span>
-        <span><strong>{item.name || "Novo equipamento"}</strong><small>{item.type} · quantidade {item.quantity}</small></span>
-        {item.equipped && <b>Equipado</b>}
-        <span className="disclosure">+</span>
-      </summary>
-      <div className="equipment-editor">
-        <label className="span-2">Nome<input value={item.name} onChange={(event) => update("name", event.target.value)} /></label>
-        <label>Tipo<select value={item.type} onChange={(event) => update("type", event.target.value)}>{EQUIPMENT_TYPES.map((type) => <option key={type}>{type}</option>)}</select></label>
-        <label>Quantidade<input type="number" min={0} value={item.quantity} onChange={(event) => update("quantity", Number(event.target.value))} /></label>
-        <label className="check-field"><input type="checkbox" checked={item.equipped} onChange={(event) => update("equipped", event.target.checked)} /> Equipado</label>
-        <label>CA / bônus<input type="number" value={item.armorClass} onChange={(event) => update("armorClass", Number(event.target.value))} /></label>
-        <label>Ataque<input value={item.attack} onChange={(event) => update("attack", event.target.value)} /></label>
-        <label>Dano<input value={item.damage} onChange={(event) => update("damage", event.target.value)} /></label>
-        <label className="span-2">Propriedades<input value={item.properties} onChange={(event) => update("properties", event.target.value)} /></label>
-        <label className="span-full">Notas<textarea value={item.notes} onChange={(event) => update("notes", event.target.value)} /></label>
-        <button type="button" className="remove-action" onClick={onRemove}>Remover equipamento</button>
-      </div>
-    </details>
-  );
-}
-
-function AbilityLayout({
-  sheet,
-  compact,
-  search,
-  actionFilter,
-  categoryFilter,
-  expandAll,
-  onChange,
-}: {
-  sheet: CharacterSheet;
-  compact: boolean;
-  search: string;
-  actionFilter: string;
-  categoryFilter: string;
-  expandAll: boolean | undefined;
-  onChange: (updater: (current: CharacterSheet) => CharacterSheet) => void;
-}) {
-  const section = (category: AbilityCategory) => (
-    <AbilitySection
-      key={category}
-      category={category}
-      items={sheet.abilityGroups[category]}
-      search={search}
-      actionFilter={actionFilter}
-      categoryFilter={categoryFilter}
-      expandAll={expandAll}
-      onChange={(items) => onChange((current) => ({ ...current, abilityGroups: { ...current.abilityGroups, [category]: items } }))}
-    />
-  );
-  const signatureItems = sheet.filiationSignatures[sheet.filiation] || [];
-  const signature = (
-    <SignatureWorkspace
-      key="signature"
-      filiationName={sheet.filiation}
-      items={signatureItems}
-      onResourceChange={(value) => onChange((current) => ({ ...current, divineResource: value }))}
-      onChange={(items) => onChange((current) => ({ ...current, filiationSignatures: { ...current.filiationSignatures, [sheet.filiation]: items } }))}
-    />
-  );
-
-  return (
-    <>
-      <div className={`ability-categories ${compact ? "is-compact-flow" : "is-desktop-stacks"}`}>
-        {compact ? (
-          <div className="ability-flow">
-            {signature}
-            {section("path")}
-            {section("skills")}
-            {section("filiation")}
-            {section("abilities")}
-            {section("talents")}
-          </div>
-        ) : (
-          <>
-            <div className="ability-main-band">
-              <div className="ability-column ability-column-left">{section("path")}{section("skills")}</div>
-              <div className="ability-column ability-column-right">{signature}{section("filiation")}</div>
-            </div>
-            <div className="ability-lower-band"><div className="ability-column">{section("abilities")}</div><div className="ability-column">{section("talents")}</div></div>
-          </>
-        )}
-      </div>
-      <div className="ability-print-flow print-only">
-        {signatureItems.length <= 1 ? (
-          <div className="ability-print-first-group"><div className="ability-print-section-title">Habilidades</div>{signature}</div>
-        ) : (
-          <><div className="ability-print-section-title">Habilidades</div>{signature}</>
-        )}
-        {section("path")}
-        {section("skills")}
-        {section("filiation")}
-        {section("abilities")}
-        {section("talents")}
-      </div>
-    </>
-  );
-}
 
 function normalizeSheet(candidate: unknown): CharacterSheet {
   return normalizeImportedSheet(candidate).sheet;
@@ -964,7 +31,6 @@ export default function Home() {
   const [saved, setSaved] = useState(false);
   const [importNotice, setImportNotice] = useState<string[]>([]);
   const [equipmentFilter, setEquipmentFilter] = useState("Todos");
-  const [equipmentMode, setEquipmentMode] = useState<"Todos" | "Equipados" | "Inventário">("Todos");
   const [equipmentSearch, setEquipmentSearch] = useState("");
   const [abilitySearch, setAbilitySearch] = useState("");
   const [abilityCategoryFilter, setAbilityCategoryFilter] = useState("Todas");
@@ -1018,8 +84,13 @@ export default function Home() {
       return;
     }
     try {
-      const result = normalizeImportedSheet(JSON.parse(stored));
-      if (result.recognized) setSheet(result.sheet);
+      const parsed = JSON.parse(stored);
+      const result = normalizeImportedSheet(parsed);
+      if (result.recognized) {
+        setSheet(result.sheet);
+        // Quem já usava a ficha antiga vê o que a migração para a versão 4 ajustou.
+        if (Math.floor(Number(parsed?.version)) < 4 && result.report.adjustments.length) setImportNotice(result.report.adjustments);
+      }
     } catch {
       localStorage.removeItem("semideuses-sheet-v3");
     } finally {
@@ -1081,36 +152,21 @@ export default function Home() {
   }, [legendOpen]);
 
   const filiation = FILIATIONS[sheet.filiation as keyof typeof FILIATIONS] || {
-    resource: "Recurso da filiação",
-    max: 10,
     accent: "#b9863f",
     light: "#e8ca8c",
     deep: "#172d32",
     secondary: "#0e6172",
     mark: "Σ",
   };
-  const prof = proficiency(sheet.level);
-  const mods = useMemo(
-    () => Object.fromEntries(Object.entries(sheet.attributes).map(([key, score]) => [key, modifier(score)])) as Record<AttributeKey, number>,
-    [sheet.attributes],
-  );
-  const equippedArmor = sheet.equipment.filter((item) => item.equipped && item.type === "Armadura");
-  const armorBase = equippedArmor.length ? Math.max(...equippedArmor.map((item) => item.armorClass)) : 10 + mods.des;
-  const equipmentBonus = sheet.equipment
-    .filter((item) => item.equipped && item.type !== "Armadura")
-    .reduce((sum, item) => sum + item.armorClass, 0);
-  const automaticArmorClass = armorBase + equipmentBonus + sheet.caExtra;
-  const armorClass = sheet.caOverride ?? automaticArmorClass;
-  const passivePerception = 10 + mods.sab + prof * (sheet.skillRanks.Percepção || 0);
-  const perception = sheet.perceptionOverride ?? passivePerception;
-  const automaticInitiative = mods.des + sheet.initiativeExtra;
-  const initiative = sheet.initiativeOverride ?? automaticInitiative;
-  const automaticSpeed = sheet.speed;
-  const speed = sheet.speedOverride ?? automaticSpeed;
-  const castingModifier = mods[sheet.castingAttribute];
-  const castingAttackBonus = castingModifier + prof;
-  const automaticCastingDc = 8 + castingModifier + prof;
-  const castingDc = sheet.castingDcOverride ?? automaticCastingDc;
+  const derived = useMemo(() => deriveStats(sheet), [sheet]);
+  const { prof, mods, castingModifier, castingAttackBonus } = derived;
+  const hpMax = derived.hpMax.value;
+  const manaMax = derived.manaMax.value;
+  const { value: armorClass, auto: automaticArmorClass } = derived.armorClass;
+  const { value: perception, auto: passivePerception } = derived.perception;
+  const { value: initiative } = derived.initiative;
+  const { value: speed, auto: automaticSpeed } = derived.speed;
+  const { value: castingDc } = derived.castingDc;
 
   const rootStyle = {
     "--deity": filiation.accent,
@@ -1127,21 +183,30 @@ export default function Home() {
     setSheet((current) => ({ ...current, personality: { ...current.personality, [key]: value } }));
   }
 
-  function updateVitalMaximum(resource: "hp" | "mana", maximumKey: "hpMax" | "manaMax", value: number) {
+  function updateVitalMaximum(resource: "hp" | "mana", overrideKey: "hpMaxOverride" | "manaMaxOverride", value: number) {
     const nextMaximum = Math.max(0, Number.isFinite(value) ? value : 0);
-    setSheet((current) => ({ ...current, [maximumKey]: nextMaximum, [resource]: Math.min(Math.max(0, current[resource]), nextMaximum) }));
+    setSheet((current) => ({ ...current, [overrideKey]: nextMaximum, [resource]: Math.min(Math.max(0, current[resource]), nextMaximum) }));
+  }
+
+  function resetVitalMaximum(resource: "hp" | "mana", overrideKey: "hpMaxOverride" | "manaMaxOverride") {
+    setSheet((current) => {
+      const next = { ...current, [overrideKey]: null };
+      const max = resource === "hp" ? deriveStats(next).hpMax.value : deriveStats(next).manaMax.value;
+      return { ...next, [resource]: Math.min(current[resource], max) };
+    });
   }
 
   function adjustHp(delta: number) {
     setSheet((current) => {
-      if (delta > 0 && current.hp >= current.hpMax) return { ...current, hpTemp: Math.max(0, current.hpTemp + delta) };
+      const max = deriveStats(current).hpMax.value;
+      if (delta > 0 && current.hp >= max) return { ...current, hpTemp: Math.max(0, current.hpTemp + delta) };
       if (delta < 0 && current.hpTemp > 0) return { ...current, hpTemp: Math.max(0, current.hpTemp + delta) };
-      return { ...current, hp: Math.min(Math.max(0, current.hpMax), Math.max(0, current.hp + delta)) };
+      return { ...current, hp: Math.min(Math.max(0, max), Math.max(0, current.hp + delta)) };
     });
   }
 
   function adjustMana(delta: number) {
-    setSheet((current) => ({ ...current, mana: Math.min(Math.max(0, current.manaMax), Math.max(0, current.mana + delta)) }));
+    setSheet((current) => ({ ...current, mana: Math.min(Math.max(0, deriveStats(current).manaMax.value), Math.max(0, current.mana + delta)) }));
   }
 
   async function setAvatar(file?: File) {
@@ -1154,7 +219,7 @@ export default function Home() {
   }
 
   function exportJson() {
-    const blob = new Blob([JSON.stringify(sheet, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify({ ...sheet, hpMax, manaMax, speed, skillRanks: Object.fromEntries(derived.skills.map((skill) => [skill.name, skill.rank])) }, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -1198,18 +263,26 @@ export default function Home() {
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.print()));
   }
 
+  const typeCounts = Object.fromEntries(EQUIPMENT_TYPES.map((type) => [type, sheet.equipment.filter((item) => item.type === type).length]));
+  const activeEquipmentFilter = equipmentFilter === "Todos" || typeCounts[equipmentFilter] ? equipmentFilter : "Todos";
   const filteredEquipment = sheet.equipment.filter((item) => {
-    const matchesType = equipmentFilter === "Todos" || item.type === equipmentFilter;
-    const matchesMode = equipmentMode === "Todos" || (equipmentMode === "Equipados" ? item.equipped : !item.equipped);
+    const matchesType = activeEquipmentFilter === "Todos" || item.type === activeEquipmentFilter;
     const query = equipmentSearch.trim().toLocaleLowerCase();
     const matchesSearch = !query || [item.name, item.type, item.properties, item.notes, item.attack, item.damage].join(" ").toLocaleLowerCase().includes(query);
-    return matchesType && matchesMode && matchesSearch;
+    return matchesType && matchesSearch;
   });
-  const equippedCount = sheet.equipment.filter((item) => item.equipped).length;
-  const inventoryCount = sheet.equipment.length - equippedCount;
-  const equipmentGroups = (["Equipados", "Inventário"] as const)
-    .map((group) => ({ group, items: filteredEquipment.filter((item) => group === "Equipados" ? item.equipped : !item.equipped) }))
-    .filter(({ group, items }) => (equipmentMode === "Todos" || equipmentMode === group) && items.length > 0);
+  const warningById = new Map(derived.armorWarnings.map((entry) => [sheet.equipment[entry.index].id, entry.message]));
+  const equipmentGroups = ([["Equipado agora", true], ["Na mochila", false]] as const)
+    .map(([group, equipped]) => ({ group, equipped, items: filteredEquipment.filter((item) => item.equipped === equipped) }))
+    .filter(({ items }) => items.length > 0);
+  const equippedNames = sheet.equipment.filter((item) => item.equipped).map((item) => item.name || "item sem nome");
+
+  const dockVisible = useScrolledPast("combate");
+  const activeSection = useActiveSection(TAB_SECTION_IDS);
+  const adjustResource = (delta: number) => setSheet((current) => {
+    const resource = deriveStats(current).resource;
+    return resource ? { ...current, divineResource: clampResource(current.divineResource + delta, resource) } : current;
+  });
 
   return (
     <main
@@ -1272,19 +345,11 @@ export default function Home() {
               <div className={`identity-row ${sheet.level >= 20 ? "has-legend" : ""}`}>
                 <label className="identity-filiation"><span>Filiação</span><div className="filiation-control"><img src={filiationSeal(sheet.filiation).src} width={34} height={34} loading="eager" decoding="async" alt="" /><select value={sheet.filiation} onChange={(event) => {
                   const name = event.target.value;
-                  const selected = FILIATIONS[name as keyof typeof FILIATIONS];
-                  setSheet((current) => ({
-                    ...current,
-                    filiation: name,
-                    divineResource: selected ? Math.min(current.divineResource, selected.max) : 0,
-                    filiationSignatures: name
-                      ? ensureFiliationSignatures(current.filiationSignatures, name)
-                      : current.filiationSignatures,
-                }));
+                  setSheet((current) => applyIdentity(current, { filiation: name }));
                 }}>{[<option key="empty" value="">Escolha uma filiação</option>, ...Object.keys(FILIATIONS).map((name) => <option key={name} value={name}>{name}</option>)]}</select></div></label>
-                <label className="identity-path"><span>Caminho divino</span><input value={sheet.pathName} onChange={(event) => patch("pathName", event.target.value)} /></label>
-                <label className="identity-origin"><span>Origem</span><input list="origin-options" placeholder="Ex.: Semideus Grego" value={sheet.origin} onChange={(event) => patch("origin", event.target.value)} /></label>
-                <label className="identity-level"><span>Nível</span><input type="number" min={1} value={sheet.level} onChange={(event) => patch("level", Math.max(1, Number(event.target.value)))} /></label>
+                <label className="identity-path"><span>Caminho divino</span><input list="path-options" value={sheet.pathName} onChange={(event) => setSheet((current) => applyPath(current, event.target.value))} /></label>
+                <label className="identity-origin"><span>Origem</span><input list="origin-options" placeholder="Ex.: Semideus Grego" value={sheet.origin} onChange={(event) => setSheet((current) => applyIdentity(current, { origin: event.target.value }))} /></label>
+                <label className="identity-level"><span>Nível</span><input type="number" min={1} value={sheet.level} onChange={(event) => setSheet((current) => applyLevel(current, Number(event.target.value)))} /></label>
                 {sheet.level >= 20 && (
                   <button
                     type="button"
@@ -1296,9 +361,11 @@ export default function Home() {
                   </button>
                 )}
               </div>
+              <datalist id="path-options">{pathNames(sheet.filiation).map((name) => <option key={name} value={name} />)}</datalist>
+              <datalist id="background-options">{BACKGROUNDS.map((entry) => <option key={entry.name} value={entry.name} />)}</datalist>
               <datalist id="origin-options">{ORIGIN_SUGGESTIONS.map((origin) => <option key={origin} value={origin} />)}</datalist>
               <div className="identity-secondary">
-                <label><span>Antecedente</span><input value={sheet.background} onChange={(event) => patch("background", event.target.value)} /></label>
+                <label><span>Antecedente</span><input list="background-options" value={sheet.background} onChange={(event) => setSheet((current) => applyBackground(current, event.target.value))} /></label>
                 <label><span>Jogador</span><input value={sheet.player} onChange={(event) => patch("player", event.target.value)} /></label>
               </div>
             </div>
@@ -1307,51 +374,87 @@ export default function Home() {
           <div className="combat-dashboard" id="combate" style={{ "--resource-texture": `url(${RESOURCE_ASSETS.texture})` } as CSSProperties}>
             <section className="vitals-block">
               <div className="vital-row">
-                <NumberControl label="PV" value={sheet.hp} max={sheet.hpMax} iconSrc={RESOURCE_ASSETS.health} onChange={(value) => patch("hp", Math.min(Math.max(0, value), Math.max(0, sheet.hpMax)))} onIncrease={() => adjustHp(1)} onDecrease={() => adjustHp(-1)} onMaxChange={(value) => updateVitalMaximum("hp", "hpMax", value)} />
-                <label className="maximum-field">Máximo<input type="number" min={1} value={sheet.hpMax} onChange={(event) => patch("hpMax", Number(event.target.value))} /></label>
-                <ResourceBar label="PV" value={sheet.hp} max={sheet.hpMax} temp={sheet.hpTemp} color="var(--health)" kind="health" onChange={(value) => patch("hp", value)} />
+                <NumberControl label="PV" value={sheet.hp} max={hpMax} iconSrc={RESOURCE_ASSETS.health} onChange={(value) => patch("hp", Math.min(Math.max(0, value), Math.max(0, hpMax)))} onIncrease={() => adjustHp(1)} onDecrease={() => adjustHp(-1)} onMaxChange={(value) => updateVitalMaximum("hp", "hpMaxOverride", value)} autoMax={derived.hpMax.overridden ? derived.hpMax.auto : null} onResetMax={() => resetVitalMaximum("hp", "hpMaxOverride")} />
+                <label className="maximum-field">Máximo<input type="number" min={1} value={hpMax} onChange={(event) => updateVitalMaximum("hp", "hpMaxOverride", Number(event.target.value))} /></label>
+                <ResourceBar label="PV" value={sheet.hp} max={hpMax} temp={sheet.hpTemp} color="var(--health)" kind="health" onChange={(value) => patch("hp", value)} />
                 <label className="temp-value">Temporário<input type="number" min={0} value={sheet.hpTemp} onChange={(event) => patch("hpTemp", Number(event.target.value))} /></label>
               </div>
+              {derived.usesMana || manaMax > 0 ? (
               <div className="vital-row mana-row">
-                <NumberControl label="MP" value={sheet.mana} max={sheet.manaMax} iconSrc={RESOURCE_ASSETS.mana} onChange={(value) => patch("mana", Math.min(Math.max(0, value), Math.max(0, sheet.manaMax)))} onIncrease={() => adjustMana(1)} onDecrease={() => adjustMana(-1)} onMaxChange={(value) => updateVitalMaximum("mana", "manaMax", value)} />
-                <label className="maximum-field">Máximo<input type="number" min={1} value={sheet.manaMax} onChange={(event) => patch("manaMax", Number(event.target.value))} /></label>
-                <ResourceBar label="MP" value={sheet.mana} max={sheet.manaMax} color="var(--mana)" kind="mana" onChange={(value) => patch("mana", value)} />
+                <NumberControl label="MP" value={sheet.mana} max={manaMax} iconSrc={RESOURCE_ASSETS.mana} onChange={(value) => patch("mana", Math.min(Math.max(0, value), Math.max(0, manaMax)))} onIncrease={() => adjustMana(1)} onDecrease={() => adjustMana(-1)} onMaxChange={(value) => updateVitalMaximum("mana", "manaMaxOverride", value)} autoMax={derived.manaMax.overridden ? derived.manaMax.auto : null} onResetMax={() => resetVitalMaximum("mana", "manaMaxOverride")} />
+                <label className="maximum-field">Máximo<input type="number" min={1} value={manaMax} onChange={(event) => updateVitalMaximum("mana", "manaMaxOverride", Number(event.target.value))} /></label>
+                <ResourceBar label="MP" value={sheet.mana} max={manaMax} color="var(--mana)" kind="mana" onChange={(value) => patch("mana", value)} />
               </div>
+              ) : <p className="resource-note">{derived.kind === "cyclops" || derived.kind === "mortal" ? "Esta origem não usa Mana." : `${sheet.filiation} não usa Mana.`}</p>}
             </section>
 
-            <section className="divine-block">
-              <NumberControl label={filiation.resource} value={sheet.divineResource} max={filiation.max} iconSrc={RESOURCE_ASSETS.divine} onChange={(value) => patch("divineResource", value)} />
-              <ResourceBar value={sheet.divineResource} max={filiation.max} color="var(--deity)" />
+            <section className="divine-block" title={derived.resource?.spec.note}>
+              {derived.resource ? (
+                <>
+                  <NumberControl
+                    label={derived.resource.spec.name}
+                    value={sheet.divineResource}
+                    min={derived.resource.min}
+                    max={derived.resource.max}
+                    iconSrc={RESOURCE_ASSETS.divine}
+                    onChange={(value) => patch("divineResource", clampResource(value, derived.resource!))}
+                    onIncrease={() => adjustResource(1)}
+                    onDecrease={() => adjustResource(-1)}
+                    onMaxChange={(value) => patch("resourceMaxOverride", Math.max(derived.resource!.min, value))}
+                    autoMax={derived.resource.overridden ? derived.resource.autoMax : null}
+                    onResetMax={() => patch("resourceMaxOverride", null)}
+                  />
+                  <ResourceBar value={sheet.divineResource} min={derived.resource.min} max={derived.resource.max} color="var(--deity)" />
+                </>
+              ) : (
+                <p className="resource-note">{!derived.profile ? "Escolha uma filiação ou uma origem para ver o recurso." : derived.kind === "cyclops" ? "Cíclopes não usam Mana nem contador: os poderes são medidos em usos por Descanso." : `${sheet.filiation || sheet.origin} não usa um contador próprio: as regras estão na Assinatura da filiação.`}</p>
+              )}
               <div className="pips-line"><span className="slot-label"><img className="resource-inline-medallion" src={ASSETS.stats.favor.src} width={18} height={18} loading="eager" decoding="async" alt="" />Favor divino</span><div>{[1, 2, 3, 4, 5].map((value) => <button key={value} type="button" aria-label={`Favor divino ${value}`} className={value <= sheet.favor ? "on" : ""} onClick={() => patch("favor", sheet.favor === value ? value - 1 : value)} />)}</div></div>
               <div className="pips-line"><span className="slot-label"><img className="resource-inline-medallion" src={ASSETS.stats.sustain.src} width={18} height={18} loading="eager" decoding="async" alt="" />Sustentação</span><div>{[1, 2].map((value) => <button key={value} type="button" aria-label={`Sustentação ${value}`} className={value <= sheet.sustain ? "on" : ""} onClick={() => patch("sustain", sheet.sustain === value ? value - 1 : value)} />)}</div><b>{sheet.sustain}/2</b></div>
             </section>
 
             <section className="combat-facts">
-              <div className={`editable-fact ${sheet.caOverride !== null ? "is-overridden" : ""}`}>
-                <span className="fact-label"><img src={ASSETS.stats.armor.src} width={24} height={24} loading="lazy" decoding="async" alt="" /><span>CA</span></span><strong>{armorClass}</strong><small>{sheet.caOverride === null ? `${automaticArmorClass} automático` : `auto ${automaticArmorClass} · valor manual`}</small>
-                <div className="fact-edit"><input type="number" min={0} value={sheet.caOverride ?? armorClass} aria-label="Classe de armadura final" onFocus={(event) => event.currentTarget.select()} onChange={(event) => patch("caOverride", Number(event.target.value))} />{sheet.caOverride !== null && <button type="button" onClick={() => patch("caOverride", null)}>Usar auto</button>}</div>
-              </div>
-              <div className="initiative-fact">
-                <span className="fact-label"><img src={ASSETS.stats.initiative.src} width={24} height={24} loading="lazy" decoding="async" alt="" /><span>Iniciativa</span></span>
-                <div>
-                  <strong>{signed(initiative)}</strong>
-                  <input className="fact-number-input" type="number" value={sheet.initiativeOverride ?? initiative} aria-label="Iniciativa final" onFocus={(event) => event.currentTarget.select()} onChange={(event) => patch("initiativeOverride", Number(event.target.value))} />
-                  {sheet.initiativeOverride !== null && <button type="button" className="fact-reset" onClick={() => patch("initiativeOverride", null)}>Usar auto</button>}
-                  <label>
-                    <small>Extra</small>
-                    <input
-                      type="number"
-                      value={sheet.initiativeExtra}
-                      aria-label="Bônus extra de iniciativa"
-                      onFocus={(event) => event.currentTarget.select()}
-                      onChange={(event) => patch("initiativeExtra", Number(event.target.value))}
-                    />
-                  </label>
-                </div>
-                <small>DES {signed(mods.des)} · extra {signed(sheet.initiativeExtra)}</small>
-              </div>
-              <div className={`editable-fact ${sheet.speedOverride !== null ? "is-overridden" : ""}`}><span className="fact-label"><img src={ASSETS.stats.speed.src} width={24} height={24} loading="lazy" decoding="async" alt="" /><span>Deslocamento</span></span><strong>{speed} m</strong><small>{sheet.speedOverride === null ? "automático" : `auto ${automaticSpeed} m · manual`}</small><div className="fact-edit"><input type="number" min={0} value={sheet.speedOverride ?? speed} aria-label="Deslocamento final" onFocus={(event) => event.currentTarget.select()} onChange={(event) => patch("speedOverride", Number(event.target.value))} />{sheet.speedOverride !== null && <button type="button" onClick={() => patch("speedOverride", null)}>Usar auto</button>}</div></div>
-              <div className={`editable-fact ${sheet.perceptionOverride !== null ? "is-overridden" : ""}`}><span className="fact-label"><img src={ASSETS.stats.perception.src} width={24} height={24} loading="lazy" decoding="async" alt="" /><span>Percepção</span></span><strong>{perception}</strong><small>{sheet.perceptionOverride === null ? "passiva automática" : `auto ${passivePerception} · manual`}</small><div className="fact-edit"><input type="number" min={0} value={sheet.perceptionOverride ?? perception} aria-label="Percepção final" onFocus={(event) => event.currentTarget.select()} onChange={(event) => patch("perceptionOverride", Number(event.target.value))} />{sheet.perceptionOverride !== null && <button type="button" onClick={() => patch("perceptionOverride", null)}>Usar auto</button>}</div></div>
+              <Fact
+                label="CA"
+                iconSrc={ASSETS.stats.armor.src}
+                display={armorClass}
+                value={armorClass}
+                overridden={sheet.caOverride !== null}
+                hint={<>{sheet.caOverride === null ? "automática" : `auto ${automaticArmorClass}`}{derived.effects.ca !== 0 && <> · efeitos {signed(derived.effects.ca)}</>}{sheet.caExtra !== 0 && <> · extra {signed(sheet.caExtra)} <button type="button" className="fact-reset" onClick={() => patch("caExtra", 0)}>zerar</button></>}</>}
+                onOverride={(value) => patch("caOverride", value)}
+                onReset={() => patch("caOverride", null)}
+              />
+              <Fact
+                label="Iniciativa"
+                iconSrc={ASSETS.stats.initiative.src}
+                display={signed(initiative)}
+                value={initiative}
+                overridden={sheet.initiativeOverride !== null}
+                hint={<>DES {signed(mods.des)} · Reflexos {signed(INITIATIVE_BASE_BONUS)} · extra {signed(sheet.initiativeExtra)}{derived.effects.initiative !== 0 && <> · efeitos {signed(derived.effects.initiative)}</>}</>}
+                extra={<label className="fact-extra"><small>Bônus extra</small><input type="number" value={sheet.initiativeExtra} aria-label="Bônus extra de iniciativa" onFocus={(event) => event.currentTarget.select()} onChange={(event) => patch("initiativeExtra", Number(event.target.value))} /></label>}
+                onOverride={(value) => patch("initiativeOverride", value)}
+                onReset={() => patch("initiativeOverride", null)}
+              />
+              <Fact
+                label="Deslocamento"
+                iconSrc={ASSETS.stats.speed.src}
+                display={`${speed} m`}
+                value={speed}
+                overridden={sheet.speedOverride !== null}
+                hint={sheet.speedOverride === null ? "automático" : `auto ${automaticSpeed} m`}
+                onOverride={(value) => patch("speedOverride", value)}
+                onReset={() => patch("speedOverride", null)}
+              />
+              <Fact
+                label="Percepção"
+                iconSrc={ASSETS.stats.perception.src}
+                display={perception}
+                value={perception}
+                overridden={sheet.perceptionOverride !== null}
+                hint={sheet.perceptionOverride === null ? "passiva automática" : `auto ${passivePerception}`}
+                onOverride={(value) => patch("perceptionOverride", value)}
+                onReset={() => patch("perceptionOverride", null)}
+              />
               <div className="casting-panel">
                 <span className="casting-title"><img src={ASSETS.stats.casting.src} width={24} height={24} loading="lazy" decoding="async" alt="" />Conjuração</span>
                 <div className="casting-grid">
@@ -1399,7 +502,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="stats-layout reveal-section">
+        <section className="stats-layout reveal-section" id="pericias">
           <div className="attributes-column">
             <div className="editorial-heading"><h2>Atributos</h2></div>
             {(Object.keys(ATTRIBUTE_LABELS) as AttributeKey[]).map((key) => (
@@ -1411,11 +514,11 @@ export default function Home() {
             ))}
           </div>
           <div className="skills-column">
-            <div className="editorial-heading with-key"><h2>Perícias</h2><small>toque: proficiente · especialista</small></div>
-            <div className="skills-grid">{SKILLS.map(([name, key]) => {
-              const rank = sheet.skillRanks[name] || 0;
-              return <button type="button" className={`skill-entry rank-${rank}`} key={name} onClick={() => patch("skillRanks", { ...sheet.skillRanks, [name]: (rank + 1) % 3 })}><i /><span>{name}<small>{ATTRIBUTE_LABELS[key]}</small></span><strong>{signed(mods[key] + prof * rank)}</strong></button>;
-            })}</div>
+            {derived.domSkillOptions.length > 0 && <label className="dom-skill">Especialização do Dom<select value={derived.domSkillOptions.includes(sheet.domSkill) ? sheet.domSkill : ""} onChange={(event) => patch("domSkill", event.target.value)}><option value="">Escolha a perícia</option>{derived.domSkillOptions.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>}
+            <div className="editorial-heading with-key"><h2>Perícias</h2><small>filiação e antecedente já aplicados · toque para ajustar</small>{Object.keys(sheet.skillRankOverrides).length > 0 && <button type="button" className="skills-auto" onClick={() => patch("skillRankOverrides", {})}>Perícias automáticas</button>}</div>
+            <div className="skills-grid">{derived.skills.map((skill) => (
+              <button type="button" className={`skill-entry rank-${skill.rank} ${skill.overridden ? "is-manual" : ""}`} key={skill.name} onClick={() => setSheet((current) => cycleSkill(current, skill.name))} title={skill.overridden ? `Ajuste manual (o livro dá ${skill.autoRank === 2 ? "especialização" : skill.autoRank === 1 ? "proficiência" : "nenhum treino"})` : undefined}><i /><span>{skill.name}<small>{ATTRIBUTE_LABELS[skill.attribute]}{skill.overridden ? " · manual" : ""}</small></span><strong>{signed(skill.bonus)}</strong></button>
+            ))}</div>
           </div>
         </section>
 
@@ -1429,13 +532,12 @@ export default function Home() {
               <button type="button" className="ability-expand-toggle" onClick={() => setAbilityExpandAll(abilityExpandAll === true ? false : true)}>{abilityExpandAll === true ? "Recolher tudo" : "Expandir tudo"}</button>
             </div>
           </div>
-          <AbilityLayout sheet={sheet} compact={compactViewport} search={abilitySearch} actionFilter={abilityActionFilter} categoryFilter={abilityCategoryFilter} expandAll={abilityExpandAll} onChange={(updater) => setSheet(updater)} />
+          <AbilityLayout sheet={sheet} resource={derived.resource} compact={compactViewport} search={abilitySearch} actionFilter={abilityActionFilter} categoryFilter={abilityCategoryFilter} expandAll={abilityExpandAll} onChange={(updater) => setSheet(updater)} />
         </section>
 
         <section className="equipment-section reveal-section" id="equipamentos">
           <div className="section-toolbar equipment-toolbar">
             <h2><img className="section-heading-medallion" src={ASSETS.equipment.inventory.src} width={34} height={34} loading="lazy" decoding="async" alt="" />Equipamentos</h2>
-            <div className="equipment-ac-summary"><span>CA com equipamentos</span><strong>{armorClass}</strong><small>{equippedArmor.length ? `${equippedArmor.length} armadura${equippedArmor.length > 1 ? "s" : ""} equipada${equippedArmor.length > 1 ? "s" : ""}` : "base + bônus equipados"}</small></div>
             <div className="equipment-actions">
               <label className="currency-field">
                 <span><img className="currency-medallion" src={ASSETS.currency.dracma.src} width={42} height={42} loading="lazy" decoding="async" alt="" /><b>Dracmas</b></span>
@@ -1453,17 +555,22 @@ export default function Home() {
                 <div><input className="currency-symbol-input" aria-label="Símbolo do dinheiro humano" value={sheet.humanMoneyCurrency} maxLength={4} onChange={(event) => patch("humanMoneyCurrency", event.target.value)} /><input type="number" min={0} inputMode="decimal" value={sheet.humanMoney} onChange={(event) => patch("humanMoney", Math.max(0, Number(event.target.value)))} /></div>
               </label>
               <div className="currency-print print-only"><span>Dinheiro humano</span><strong>{sheet.humanMoneyCurrency} {sheet.humanMoney}</strong></div>
-              <button type="button" className="large-add" onClick={() => patch("equipment", [...sheet.equipment, { id: makeId("eq"), name: "", type: "Outro", quantity: 1, equipped: false, armorClass: 0, attack: "", damage: "", properties: "", notes: "" }])}>Adicionar equipamento</button>
             </div>
           </div>
           <div className="equipment-workspace">
-            <div className="equipment-control-row">
-              <label className="equipment-search"><span className="sr-only">Buscar equipamentos</span><input value={equipmentSearch} placeholder="Buscar equipamento" onChange={(event) => setEquipmentSearch(event.target.value)} /></label>
-              <div className="equipment-mode-filters" aria-label="Estado do inventário">{(["Todos", "Equipados", "Inventário"] as const).map((mode) => <button type="button" key={mode} className={equipmentMode === mode ? "active" : ""} onClick={() => setEquipmentMode(mode)}><img src={(mode === "Equipados" ? ASSETS.equipment.equipped : mode === "Inventário" ? ASSETS.equipment.inventory : ASSETS.sections.notes).src} width={22} height={22} loading="lazy" decoding="async" alt="" />{mode} <small>{mode === "Todos" ? sheet.equipment.length : mode === "Equipados" ? equippedCount : inventoryCount}</small></button>)}</div>
+            <div className="equipment-summary">
+              <div className="equipment-ac-summary"><span>CA</span><strong>{armorClass}</strong></div>
+              <p><b>Equipado agora:</b> {equippedNames.length ? equippedNames.join(", ") : "nada. Use o botão Equipar nos itens abaixo."}</p>
             </div>
-            <div className="equipment-filters" aria-label="Tipos de equipamento">{["Todos", ...EQUIPMENT_TYPES].map((type) => <button type="button" key={type} className={equipmentFilter === type ? "active" : ""} onClick={() => setEquipmentFilter(type)}><img src={(type === "Todos" ? ASSETS.sections.abilities : equipmentAsset(type)).src} width={24} height={24} loading="lazy" decoding="async" alt="" />{type}</button>)}</div>
+            <EquipmentAdder onAdd={(item) => patch("equipment", [...sheet.equipment, item])} />
+            <div className="equipment-control-row">
+              <label className="equipment-search"><span className="sr-only">Buscar equipamentos</span><input value={equipmentSearch} placeholder="Buscar pelo nome, dano ou propriedade" onChange={(event) => setEquipmentSearch(event.target.value)} /></label>
+              {sheet.equipment.length > 0 && <div className="equipment-filters" aria-label="Tipos de equipamento">{["Todos", ...EQUIPMENT_TYPES.filter((type) => typeCounts[type])].map((type) => <button type="button" key={type} className={activeEquipmentFilter === type ? "active" : ""} onClick={() => setEquipmentFilter(type)}><img src={(type === "Todos" ? ASSETS.sections.abilities : equipmentAsset(type)).src} width={24} height={24} loading="lazy" decoding="async" alt="" />{type} <small>{type === "Todos" ? sheet.equipment.length : typeCounts[type]}</small></button>)}</div>}
+            </div>
             <div className="equipment-groups">
-              {equipmentGroups.length === 0 ? <p className="empty-state equipment-empty-state"><img src={ASSETS.equipment.inventory.src} width={38} height={38} loading="lazy" decoding="async" alt="" />Nenhum equipamento corresponde aos filtros atuais. Adicione um item ou escolha outra categoria.</p> : equipmentGroups.map(({ group, items }) => <section className="equipment-group" key={group}><header><h3><img className="group-medallion" src={(group === "Equipados" ? ASSETS.equipment.equipped : ASSETS.equipment.inventory).src} width={26} height={26} loading="lazy" decoding="async" alt="" />{group}</h3><span>{items.length}</span></header><div className="equipment-list">{items.map((item) => <EquipmentEditor key={item.id} item={item} onUpdate={(updated) => patch("equipment", sheet.equipment.map((current) => current.id === item.id ? updated : current))} onRemove={() => patch("equipment", sheet.equipment.filter((current) => current.id !== item.id))} />)}</div></section>)}
+              {sheet.equipment.length === 0 && <p className="empty-state equipment-empty-state"><img src={ASSETS.equipment.inventory.src} width={38} height={38} loading="lazy" decoding="async" alt="" />Sua mochila está vazia. Escolha uma arma, armadura ou escudo do livro acima, ou crie um item em branco.</p>}
+              {sheet.equipment.length > 0 && equipmentGroups.length === 0 && <p className="empty-state equipment-empty-state">Nenhum item corresponde à busca. Limpe o texto ou escolha outra categoria.</p>}
+              {equipmentGroups.map(({ group, equipped, items }) => <section className="equipment-group" key={group}><header><h3><img className="group-medallion" src={(equipped ? ASSETS.equipment.equipped : ASSETS.equipment.inventory).src} width={26} height={26} loading="lazy" decoding="async" alt="" />{group}</h3><span>{items.length}</span></header><div className="equipment-list">{items.map((item) => <EquipmentRow key={item.id} item={item} warning={warningById.get(item.id)} onUpdate={(updated) => patch("equipment", sheet.equipment.map((current) => current.id === item.id ? updated : current))} onToggleEquipped={(next) => patch("equipment", setEquipped(sheet.equipment, item.id, next))} onRemove={() => patch("equipment", sheet.equipment.filter((current) => current.id !== item.id))} />)}</div></section>)}
             </div>
             <div className="print-equipment-list print-only">
               {sheet.equipment.map((item) => (
@@ -1481,6 +588,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        <EffectsSection effects={sheet.effects} onChange={(effects) => patch("effects", effects)} />
 
         <section className="story-section reveal-section" id="historia">
           <div className="section-toolbar"><h2><img className="section-heading-medallion" src={ASSETS.sections.history.src} width={34} height={34} loading="lazy" decoding="async" alt="" />História e traços</h2></div>
@@ -1556,6 +665,14 @@ export default function Home() {
           </section>
         </div>
       )}
+      <VitalsDock
+        visible={dockVisible}
+        hp={{ label: "PV", value: sheet.hp, max: hpMax, onChange: adjustHp }}
+        mana={derived.usesMana || manaMax > 0 ? { label: "MP", value: sheet.mana, max: manaMax, onChange: adjustMana } : null}
+        resource={derived.resource ? { label: derived.resource.spec.name, value: sheet.divineResource, max: derived.resource.max, onChange: adjustResource } : null}
+        armorClass={armorClass}
+      />
+      <TabBar active={activeSection} />
     </main>
   );
 }

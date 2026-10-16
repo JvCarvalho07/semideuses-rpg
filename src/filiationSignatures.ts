@@ -1,4 +1,5 @@
 import { FILIATIONS, type FiliationSignatureState, type SignatureMove, type SignatureResource } from "./model";
+import { FILIATION_RESOURCES } from "./rules";
 
 export type SignatureChoice = {
   id: string;
@@ -11,6 +12,8 @@ export type FiliationSignatureDefinition = {
   id: string;
   title: string;
   rules: string;
+  /** Gastos e manobras da Assinatura, como no livro. Sem isso, as regras viram um único item de referência. */
+  moves?: Array<Omit<SignatureMove, "id">>;
   choices?: SignatureChoice[];
   source: {
     book: "Livro do Jogador - Semideuses RPG 3e";
@@ -40,9 +43,17 @@ function movesFromRules(id: string, rules: string): SignatureMove[] {
   return moves.length ? moves : [{ id: `${id}-reference`, name: "Referência oficial", cost: "", activation: "Conforme descrição", description: rules }];
 }
 
+function officialMoves(definition: FiliationSignatureDefinition): SignatureMove[] {
+  if (!definition.moves) return movesFromRules(definition.id, definition.rules);
+  return definition.moves.map((move, index) => ({ ...move, id: `${definition.id}-move-${index + 1}` }));
+}
+
+const plainMoves = (moves: SignatureMove[] | undefined) => JSON.stringify((moves || []).map(({ name, cost, activation, description }) => ({ name, cost, activation, description })));
+
+// Marcador de lugar: o valor, o mínimo e o teto reais vêm de `deriveStats` (rules.ts) na hora de exibir.
 function defaultResource(filiation: string): SignatureResource | undefined {
-  const entry = FILIATIONS[filiation as keyof typeof FILIATIONS];
-  return entry ? { name: entry.resource, current: 0, max: entry.max, unit: "cargas" } : undefined;
+  const spec = FILIATION_RESOURCES[filiation];
+  return spec ? { name: spec.name, current: 0, max: 0, unit: spec.unit } : undefined;
 }
 
 export function makeOfficialState(definition: FiliationSignatureDefinition, filiation = ""): FiliationSignatureState {
@@ -60,111 +71,156 @@ export function makeOfficialState(definition: FiliationSignatureDefinition, fili
     resource: defaultResource(filiation),
     recovery: "",
     costs: "",
-    moves: movesFromRules(definition.id, definition.rules),
+    moves: officialMoves(definition),
     officialSnapshot: { sourceId: definition.id, title: definition.title, rules: definition.rules, pdfPage: definition.source.pdfPage },
   };
 }
 
-// Fonte de manutenção: Livro do Jogador - Semideuses RPG 3e, capítulo 4,
-// "As Filiações - os 26 Deuses", páginas PDF 31-65. O Livro do Mestre foi
-// conferido integralmente e não acrescenta assinaturas de personagem.
+// Fonte de manutenção: Livro do Jogador - Semideuses RPG 3e, capítulo "As Filiações — os 26 Deuses"
+// (páginas PDF 82-137). O texto é o da Assinatura de cada filiação; o recurso (mínimo, máximo e
+// início) fica em `FILIATION_RESOURCES`, em rules.ts, para o contador nunca divergir da ficha.
 export const FILIATION_SIGNATURES: Record<keyof typeof FILIATIONS, FiliationSignatureDefinition[]> = {
   Zeus: [{
     id: "zeus-tempestade-crescente",
     title: "Tempestade Crescente",
-    rules: "No início de cada um dos seus turnos em combate você ganha 1 Carga (máximo 5), que some após 1 minuto fora de combate. Muitas habilidades gastam Cargas para crescer: o seu poder sobe conforme a luta esquenta.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 31 },
+    rules: "A cada turno em combate você ganha 1 Carga (máx. 5) e as habilidades gastam Cargas para crescer. As Cargas somem 1 minuto depois que a luta acaba.",
+    moves: [
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 82 },
   }],
   Poseidon: [{
     id: "poseidon-mare",
     title: "Maré",
-    rules: "Você mantém um marcador de Maré que vai de -3 (Baixa) a +3 (Alta), começando em 0 a cada combate. Uma vez por turno, de graça, suba ou desça a Maré em 1. Habilidades têm cláusulas de Maré Alta (mais área e empurrão) e Maré Baixa (mais mobilidade e reposicionamento), cuja força cresce com o valor atual.",
-    choices: [{
-      id: "mare-atual",
-      label: "Maré atual",
-      defaultValue: "0",
-      options: [
-        { value: "-3", label: "-3 - Baixa" },
-        { value: "-2", label: "-2 - Baixa" },
-        { value: "-1", label: "-1 - Baixa" },
-        { value: "0", label: "0 - Neutra" },
-        { value: "1", label: "+1 - Alta" },
-        { value: "2", label: "+2 - Alta" },
-        { value: "3", label: "+3 - Alta" },
-      ],
-    }],
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 33 },
+    rules: "A Maré é um marcador de −3 (Baixa) a +3 (Alta) que começa em 0 a cada combate. Uma vez por turno você a sobe ou desce 1, de graça, e as habilidades mudam com ela: Alta empurra e alaga, Baixa reposiciona e acelera.",
+    moves: [
+      { name: "Subir ou descer a Maré", cost: "Sem custo", activation: "1×/turno", description: "Uma vez por turno, de graça, suba ou desça a Maré em 1." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 85 },
   }],
   Hades: [{
     id: "hades-almas",
     title: "Almas",
-    rules: "Sempre que um inimigo morre a até 12 m de você, ganhe 1 ficha de Alma (máximo 3 + seu modificador de Conjuração); as fichas zeram no fim do combate. Gaste Almas para invocar mortos extras, converter dano causado em cura ou estender maldições.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 35 },
+    rules: "Cada inimigo que morre a até 12 m vira uma Alma (máx. 3 + Conjuração; zeram ao fim do combate). Gaste Almas para se curar, dar outro turno a um morto invocado, esticar uma maldição ou erguer o inimigo caído como servo.",
+    moves: [
+      { name: "Cura necrótica", cost: "1", activation: "Sem ação (1×/turno)", description: "O próximo dano Necrótico seu nesta rodada cura você em metade do valor." },
+      { name: "Servo age de novo", cost: "2", activation: "Sem ação (1×/turno)", description: "Um morto que você invocou age de novo imediatamente." },
+      { name: "Estender maldição", cost: "2", activation: "Sem ação (1×/turno)", description: "Estenda por 1 rodada uma maldição ou condição que você aplicou." },
+      { name: "Erguer servo", cost: "3", activation: "Reação", description: "Quando um inimigo a até 12 m cai a 0 PV, ele se levanta como seu servo até o fim do combate." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 88 },
   }],
   Atena: [{
     id: "atena-plano-de-batalha",
     title: "Plano de Batalha",
-    rules: "Você tem um pool de Comando igual a 2 + seu modificador de Conjuração, que enche a cada combate (máximo: o dobro do valor inicial). Você ganha +1 Comando no início de cada turno seu e +1 quando um aliado acerta um inimigo marcado por você. Gastar Comando (no máximo uma opção por gatilho): Avançar, 1 Comando - um aliado a 18 m usa a Reação para mover-se até a velocidade sem provocar ataques de oportunidade. Guarda, 1 Comando - como Reação, um aliado a 18 m atingido ganha +5 de CA contra o ataque. Golpe Ordenado, 2 Comando - um aliado a 18 m usa a Reação para atacar com uma arma e +1d6 de dano. Ofensiva Total, 3 Comando - use sua Ação para um aliado a 18 m realizar imediatamente um turno completo.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 37 },
+    rules: "Você comanda com um pool de Comando (2 + Conjuração; teto no dobro) que ganha +1 por turno e +1 quando um aliado acerta um inimigo marcado. Gaste para mover, proteger, mandar atacar ou dar um turno inteiro a um aliado a 18 m.",
+    moves: [
+      { name: "Avançar", cost: "1", activation: "Reação", description: "Um aliado a 18 m usa a Reação para mover-se até a sua velocidade sem provocar ataques de oportunidade." },
+      { name: "Guarda", cost: "1", activation: "Reação", description: "Um aliado a 18 m atingido por um ataque ganha +5 de CA contra ele." },
+      { name: "Golpe Ordenado", cost: "2", activation: "Reação", description: "Um aliado a 18 m usa a Reação para atacar imediatamente com uma arma, com +1d6 de dano." },
+      { name: "Ofensiva Total", cost: "3", activation: "Ação", description: "Use a sua Ação: um aliado a 18 m realiza de imediato um turno completo (movimento, ação e ação bônus)." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 90 },
   }],
   Ares: [{
     id: "ares-furia",
     title: "Fúria",
-    rules: "Você tem um medidor de Fúria de 0 a 10. Ganha 1 quando sofre dano e 2 quando causa um crítico ou derruba um inimigo. Começa cada combate com Fúria igual a quanto de PV já perdeu. Gastar Fúria (no máximo uma opção por gatilho): Golpe Furioso, 2 - um ataque que acertou causa +1d8; Couro de Guerra, 3 - como Reação, reduza o dano sofrido em 2d8; Rugido de Ares, 2 - um inimigo a 9 m faz TR de CAR ou fica Abalado por 1 rodada; Sede de Batalha, 5 - faça imediatamente um ataque com arma adicional.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 39 },
+    rules: "A Fúria (0 a 10) sobe quando você apanha, acerta um crítico ou derruba um inimigo, e você já começa o combate com tanta Fúria quanto PV perdeu. Gaste-a para golpear mais forte, reduzir dano, aterrorizar ou atacar de novo.",
+    moves: [
+      { name: "Golpe Furioso", cost: "2", activation: "Ao acertar", description: "Um ataque seu que acabou de acertar causa +1d8 de dano." },
+      { name: "Couro de Guerra", cost: "3", activation: "Reação", description: "Reduza em 2d8 o dano de um golpe sofrido." },
+      { name: "Rugido de Ares", cost: "2", activation: "No seu turno", description: "Um inimigo a 9 m faz TR de CAR ou fica Abalado por 1 rodada." },
+      { name: "Sede de Batalha", cost: "5", activation: "No seu turno", description: "Faça imediatamente um ataque com arma adicional." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 93 },
   }],
   Apolo: [{
     id: "apolo-marca-solar",
     title: "Marca Solar",
-    rules: "Suas flechas marcam o alvo com luz por 1 minuto. Aliados causam +1d6 de dano contra alvos marcados, e suas curas podem saltar para um aliado a até 3 m de um marcado.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 40 },
+    rules: "Suas flechas marcam o alvo com luz por 1 minuto: aliados causam +1d6 contra ele e as suas curas podem saltar para quem estiver a até 3 m de um marcado.",
+    moves: [
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 95 },
   }],
   Hefesto: [{
     id: "hefesto-dispositivos",
     title: "Dispositivos",
-    rules: "Você tem Pontos de Máquina iguais a 1 + metade do seu nível, reconfigurados no Descanso. Os dispositivos custam Pontos em vez de MP, e você mantém no máximo tantos ativos quanto seus Pontos. Torreta, 1 Ponto - atira 2d8 a até 18 m por 1 minuto. Autômato, 2 Pontos - ND aproximado de 1/4 do nível e age na sua Iniciativa. Bastião, 2 Pontos - barreira de bronze de 3 m, com cobertura de três quartos, por 1 minuto.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 42 },
+    rules: "Você tem Pontos de Máquina (1 + metade do nível), reconfigurados no Descanso, para manter torretas, autômatos e bastiões ativos na sua Iniciativa. Nunca acumula mais do que o orçamento.",
+    moves: [
+      { name: "Torreta", cost: "1", activation: "Dispositivo", description: "Uma torre que atira 2d8 a até 18 m por 1 minuto." },
+      { name: "Autômato", cost: "2", activation: "Dispositivo", description: "Um autômato (ND ~1/4 do nível) que age na sua Iniciativa." },
+      { name: "Bastião", cost: "2", activation: "Dispositivo", description: "Uma barreira de bronze de 3 m (cobertura de três quartos) por 1 minuto." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 97 },
   }],
   Hermes: [{
     id: "hermes-ritmo",
     title: "Ritmo",
-    rules: "Você ganha 1 ficha de Ritmo quando se move 6 m ou mais e 1 quando faz um ataque ou habilidade (máximo = Bônus de Proficiência + Conjuração). Gastos: Impulso, 1 - Ação Bônus adicional neste turno; Reposicionar, 1 - um aliado a 9 m se desloca 3 m sem provocar ataques de oportunidade; Furto Veloz, 2 - roube um benefício mágico ativo ou item pequeno de um inimigo a 9 m, com TR de DES.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 43 },
+    rules: "Cada movimento de 6 m ou mais e cada ataque ou habilidade rende 1 Ritmo (máx. proficiência + Conjuração). Gaste para ganhar uma Ação Bônus extra, reposicionar aliados ou roubar um benefício mágico.",
+    moves: [
+      { name: "Impulso", cost: "1", activation: "Fora do turno ou ao fim dele", description: "Você ganha uma Ação Bônus adicional neste turno." },
+      { name: "Reposicionar", cost: "1", activation: "Fora do turno ou ao fim dele", description: "Um aliado a 9 m se desloca 3 m sem provocar ataques de oportunidade." },
+      { name: "Furto Veloz", cost: "2", activation: "Fora do turno ou ao fim dele", description: "Roube um benefício mágico ativo ou um item pequeno de um inimigo a 9 m (TR de DES)." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 100 },
   }],
   Afrodite: [{
     id: "afrodite-encanto",
     title: "Encanto",
-    rules: "Você tem fichas de Encanto iguais ao seu modificador de Conjuração, que enchem a cada combate e crescem +1 quando um inimigo falha um TR contra você. Gastos: Redirecionar, 1 - o próximo ataque de um inimigo a 12 m atinge outro inimigo à sua escolha, TR de SAB nega; Deslumbrar, 1 - um inimigo a 12 m tem Desvantagem no próximo ataque; Ordem Sussurrada, 2 - um inimigo já Enfeitiçado gasta a ação numa ordem simples e não suicida.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 45 },
+    rules: "Você tem fichas de Encanto iguais à Conjuração, recarregadas a cada combate, e ganha mais uma quando um inimigo falha um TR contra você. Gaste para redirecionar ataques, deslumbrar ou dar ordens a quem já está enfeitiçado.",
+    moves: [
+      { name: "Redirecionar", cost: "1", activation: "A qualquer momento", description: "O próximo ataque de um inimigo a 12 m passa a atingir outro inimigo à sua escolha (TR de SAB nega)." },
+      { name: "Deslumbrar", cost: "1", activation: "A qualquer momento", description: "Um inimigo a 12 m tem Desvantagem no próximo ataque." },
+      { name: "Ordem Sussurrada", cost: "2", activation: "A qualquer momento", description: "Um inimigo já Enfeitiçado por você gasta a ação dele numa ordem simples e não suicida." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 102 },
   }],
   "Deméter": [{
     id: "demeter-crescimento",
     title: "Crescimento",
-    rules: "Suas zonas de plantas persistem e se espalham 1,5 a 3 m por turno, criando terreno difícil, cobertura e cura contínua para aliados dentro delas. Aos poucos, o campo inteiro vira o seu jardim.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 47 },
+    rules: "Suas Sementes viram zonas de 3 m (até 3 ao mesmo tempo; 5 no nível 11) que crescem a cada turno e são terreno difícil para inimigos e cobertura leve para aliados. Com MP você as move, cura quem está dentro ou prende inimigos.",
+    moves: [
+      { name: "Mover ou crescer zona", cost: "1 MP", activation: "Gasto universal", description: "Mova uma zona 3 m ou faça-a crescer 3 m de imediato." },
+      { name: "Cura da zona", cost: "2 MP", activation: "Gasto universal", description: "Uma zona cura 1d8 em cada aliado dentro dela." },
+      { name: "Raízes agarrantes", cost: "3 MP", activation: "Gasto universal", description: "Inimigos dentro da zona fazem TR de FOR ou ficam Restritos até o fim do próximo turno deles." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 105 },
   }],
   "Dionísio": [{
     id: "dionisio-delirio",
     title: "Delírio",
-    rules: "Algumas habilidades usam a Tabela de Loucura (1d6): 1 Confusão - ataca o alvo mais próximo; 2 Pânico - fica Apavorada e foge por 1 rodada; 3 Letargia - perde a ação; 4 Euforia - ataca com Vantagem, mas tem Desvantagem em TR; 5 Frenesi - faz um ataque extra, mas ataques contra ela têm Vantagem; 6 Estupor - fica Atordoada por 1 rodada.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 48 },
+    rules: "Suas habilidades misturam escolha e acaso: parte do efeito é rolada na Tabela de Loucura (1d6), de confusão a estupor.",
+    moves: [
+      { name: "1 — Confusão", cost: "", activation: "Tabela de Loucura (1d6)", description: "A criatura ataca o alvo mais próximo, aliado ou não, neste turno." },
+      { name: "2 — Pânico", cost: "", activation: "Tabela de Loucura (1d6)", description: "A criatura fica Apavorada e foge por 1 rodada." },
+      { name: "3 — Letargia", cost: "", activation: "Tabela de Loucura (1d6)", description: "A criatura perde a ação neste turno." },
+      { name: "4 — Euforia", cost: "", activation: "Tabela de Loucura (1d6)", description: "A criatura ataca com Vantagem, mas tem Desvantagem em TR até o próximo turno." },
+      { name: "5 — Frenesi", cost: "", activation: "Tabela de Loucura (1d6)", description: "A criatura faz um ataque extra, mas ataques contra ela têm Vantagem até o próximo turno." },
+      { name: "6 — Estupor", cost: "", activation: "Tabela de Loucura (1d6)", description: "A criatura fica Atordoada por 1 rodada." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 107 },
   }],
   "Ártemis": [{
     id: "artemis-presa-marcada",
     title: "Presa Marcada",
-    rules: "Você marca uma presa por vez; você e suas Caçadoras espectrais, se as tiver, concentram fogo nela, com dano extra e flanqueamento automático.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 49 },
+    rules: "Você marca uma presa por vez, com Ação Bônus e sem custo. Contra ela, você e suas Caçadoras espectrais causam +1d8 e contam como flanqueando; os outros aliados só a enxergam melhor.",
+    moves: [
+      { name: "Marcar a presa", cost: "Sem custo", activation: "Ação Bônus", description: "Marque uma presa por vez (1 minuto ou até marcar outra): você e suas Caçadoras espectrais causam +1d8 contra ela e contam como flanqueando." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 109 },
   }],
   "Hécate": [{
     id: "hecate-pontos-de-feitico",
     title: "Pontos de Feitiço",
-    rules: "Você tem um pool igual ao seu modificador de Conjuração, recuperado no Descanso. Antes de conjurar, gaste pontos para moldar a magia: +1 alvo, +3 m de área, dobrar a duração ou trocar o tipo de dano.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 51 },
+    rules: "Seus Pontos de Feitiço (iguais à Conjuração, recuperados no Descanso) moldam a magia antes de conjurar: mais um alvo, mais área, mais duração ou outro tipo de dano.",
+    moves: [
+      { name: "Moldar a magia", cost: "Pontos de Feitiço", activation: "Antes de conjurar", description: "Gaste pontos: +1 alvo, +3 m de área, dobrar a duração ou trocar o tipo de dano." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 112 },
   }],
   "Íris": [{
     id: "iris-espectro",
     title: "Espectro",
-    rules: "No início do turno, sem custo, você sintoniza uma cor que muda suas habilidades: Dourado para cura, Vermelho para dano e ofuscar, ou Azul para mobilidade e escudo de luz.",
+    rules: "No início do turno, sem custo, você escolhe uma cor que muda suas habilidades: Dourado cura, Vermelho fere e cega, Azul move e protege.",
     choices: [{
       id: "cor-atual",
       label: "Sintonia atual",
@@ -175,48 +231,71 @@ export const FILIATION_SIGNATURES: Record<keyof typeof FILIATIONS, FiliationSign
         { value: "azul", label: "Azul - mobilidade e escudo" },
       ],
     }],
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 52 },
+    moves: [
+      { name: "Dourado", cost: "Sem custo", activation: "Início do turno", description: "Sintonia de cura." },
+      { name: "Vermelho", cost: "Sem custo", activation: "Início do turno", description: "Sintonia de dano e cegar." },
+      { name: "Azul", cost: "Sem custo", activation: "Início do turno", description: "Sintonia de mobilidade e escudo de luz." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 114 },
   }],
   "Nêmesis": [{
     id: "nemesis-divida",
     title: "Dívida",
-    rules: "Você ganha 1 ficha de Dívida quando sofre dano de um inimigo, é alvo de um crítico ou um aliado cai (máximo 5; zera no fim do combate). Gaste Dívida para amplificar a retribuição: +1d8 no dano de vingança ou force um inimigo a repetir um TR.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 53 },
+    rules: "Você ganha Dívida ao sofrer dano de um inimigo, ser alvo de um crítico ou ver um aliado cair (máx. 5; zera ao fim do combate). Gaste para cobrar mais caro na vingança ou forçar um inimigo a repetir um TR.",
+    moves: [
+      { name: "Retribuição", cost: "Dívida", activation: "Ao punir", description: "+1d8 no dano de vingança." },
+      { name: "Repetir TR", cost: "Dívida", activation: "Ao punir", description: "Force um inimigo a repetir um Teste de Resistência." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 116 },
   }],
   Hipnos: [{
     id: "hipnos-sonolencia",
     title: "Sonolência",
-    rules: "Suas habilidades aplicam fichas de Sonolência. Quando um alvo acumula 3 fichas, ele cai Inconsciente automaticamente por 1 minuto ou até sofrer dano; sofrer dano remove 1 ficha.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 54 },
+    rules: "Suas habilidades empilham Sonolência nos alvos: com 3 fichas, o alvo cai inconsciente por 1 minuto ou até sofrer dano, e cada dano sofrido tira 1 ficha.",
+    moves: [
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 117 },
   }],
   Morfeu: [{
     id: "morfeu-fios-de-sonho",
     title: "Fios de Sonho",
-    rules: "Ao acertar a mente de um inimigo, com TR falho contra você, ganhe 1 Fio (máximo = Conjuração). Gaste Fios para manifestar ilusões: criar cobertura, mover a imagem de um aliado ou impor medo. Gasto universal - Reação, 1 Fio: a imagem ilusória de um aliado a 9 m desloca-se 3 m e o ataque que o atingiria erra.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 55 },
+    rules: "Quando um inimigo falha o TR contra a sua mente, você ganha 1 Fio de Sonho (máx. Conjuração). Os Fios criam ilusões úteis: cobertura, deslocar a imagem de um aliado ou impor medo.",
+    moves: [
+      { name: "Imagem ilusória", cost: "1", activation: "Reação", description: "A imagem ilusória de um aliado a 9 m desloca-se 3 m e o ataque que o atingiria erra." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 119 },
   }],
   Nike: [{
     id: "nike-impeto",
     title: "Ímpeto",
-    rules: "O grupo acumula 1 de Ímpeto quando um aliado reduz um inimigo a 0 PV ou acerta um crítico. Gastos universais: 1 Ímpeto - +1d6 num ataque de um aliado; 2 Ímpeto - um aliado usa a Reação para mover-se até metade da velocidade e atacar.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 56 },
+    rules: "O grupo junta Ímpeto sempre que um aliado derruba um inimigo ou acerta um crítico. Você o gasta para dar dano extra, ou uma ação de movimento e ataque, a um aliado.",
+    moves: [
+      { name: "Bônus de ataque", cost: "1", activation: "Gasto universal", description: "+1d6 num ataque de um aliado." },
+      { name: "Ação coletiva", cost: "2", activation: "Reação do aliado", description: "Um aliado usa a Reação para mover-se até metade da velocidade e atacar." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 121 },
   }],
   Tique: [{
     id: "tique-dados-de-sorte",
     title: "Dados de Sorte",
-    rules: "Suas habilidades criam e distribuem Dados de Sorte, que permitem rolar duas vezes e usar o melhor resultado, e Dados de Azar, que forçam o inimigo a rolar duas vezes e usar o pior. Você pode reter dados ao distribuí-los.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 57 },
+    rules: "Suas habilidades criam e distribuem Dados de Sorte (rolar duas vezes e ficar com o melhor) e Dados de Azar (o pior) para a mesa inteira, e você pode guardar dados ao distribuí-los.",
+    moves: [
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 123 },
   }],
   "Tânatos": [{
     id: "tanatos-marca-da-morte",
     title: "Marca da Morte",
-    rules: "Você marca um alvo à vontade. Se um alvo marcado cair a 25% dos PV ou menos, a marca detona: ele faz TR de CON ou é reduzido a 0 PV; quem resiste sofre 4d8 de dano Necrótico, ou 6d8 no nível 11+.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 58 },
+    rules: "Você marca à vontade um alvo visível a até 18 m (duas marcas a partir do nível 2). Se ele cair a 25% dos PV ou menos, a marca detona: TR de CON ou vai a 0 PV; quem resiste sofre 4d8 Necrótico (6d8 no nível 11+).",
+    moves: [
+      { name: "Marca da Morte", cost: "Sem custo", activation: "Ação Bônus", description: "Marque um alvo visível a até 18 m por 1 minuto (duas marcas a partir do nível 2, com Olho do Fim). Se cair a 25% dos PV ou menos, a marca detona: TR de CON ou 0 PV; quem resiste sofre 4d8 Necrótico (6d8 no nível 11+)." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 125 },
   }],
   "Éolo": [{
     id: "eolo-ventania",
     title: "Ventania",
-    rules: "Você mantém uma esfera de vento de 6 m que move até 6 m por turno, com Ação Bônus. Dentro dela você decide: empurrar inimigos, desviar projéteis ou dar mobilidade a aliados, e suas habilidades ficam mais fortes.",
+    rules: "Você mantém uma esfera de vento de 6 m e a move até 6 m por turno com Ação Bônus. Dentro dela você empurra inimigos, desvia projéteis ou dá mobilidade a aliados, e suas habilidades ficam mais fortes.",
     choices: [{
       id: "efeito-atual",
       label: "Efeito atual",
@@ -227,18 +306,27 @@ export const FILIATION_SIGNATURES: Record<keyof typeof FILIATIONS, FiliationSign
         { value: "mobilidade", label: "Mobilidade para aliados" },
       ],
     }],
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 59 },
+    moves: [
+      { name: "Mover a esfera", cost: "Sem custo", activation: "Ação Bônus", description: "Mova a esfera de vento de 6 m até 6 m por turno." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 127 },
   }],
   Circe: [{
     id: "circe-reagentes",
     title: "Reagentes",
-    rules: "No Descanso, prepare Reagentes iguais ao seu modificador de Conjuração. Cada opção gasta 1 Reagente, sem MP: Poção - um aliado a 9 m recupera 3d6 PV; Pó Sonífero - alvo a 9 m faz TR de CON ou fica Lento por 1 rodada; Frasco Corrosivo - área de 3 m sofre 2d6 de ácido, TR de DES reduz à metade; Essência - um aliado remove uma condição.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 60 },
+    rules: "No Descanso você prepara Reagentes (iguais à Conjuração) e os gasta sem MP: poção de cura, pó sonífero, frasco corrosivo ou uma essência que remove uma condição.",
+    moves: [
+      { name: "Poção", cost: "1", activation: "Gasto de Reagente", description: "Um aliado a 9 m recupera 3d6 PV." },
+      { name: "Pó Sonífero", cost: "1", activation: "Gasto de Reagente", description: "Um alvo a 9 m faz TR de CON ou fica Lento por 1 rodada." },
+      { name: "Frasco Corrosivo", cost: "1", activation: "Gasto de Reagente", description: "Área de 3 m: 2d6 de dano de ácido (TR de DES reduz à metade)." },
+      { name: "Essência", cost: "1", activation: "Gasto de Reagente", description: "Um aliado remove uma condição." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 129 },
   }],
   "Perséfone": [{
     id: "persefone-estacao",
     title: "Estação",
-    rules: "Você está em Primavera, voltada a cura e crescimento, ou Inverno, voltado a dano necrótico e controle, alternando como Ação Bônus. Muitas habilidades têm uma cláusula para cada postura.",
+    rules: "Com Ação Bônus você alterna entre Primavera (cura e crescimento) e Inverno (dano necrótico e controle). Muitas habilidades têm uma cláusula para cada postura.",
     choices: [{
       id: "estacao-atual",
       label: "Estação atual",
@@ -248,18 +336,28 @@ export const FILIATION_SIGNATURES: Record<keyof typeof FILIATIONS, FiliationSign
         { value: "inverno", label: "Inverno - necrótico e controle" },
       ],
     }],
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 62 },
+    moves: [
+      { name: "Primavera", cost: "Sem custo", activation: "Ação Bônus", description: "Postura de cura e crescimento." },
+      { name: "Inverno", cost: "Sem custo", activation: "Ação Bônus", description: "Postura de dano necrótico e controle." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 131 },
   }],
   Hebe: [{
     id: "hebe-vigor",
     title: "Vigor",
-    rules: "Hebe não usa Mana: tem um pool de Vigor igual a 2 x seu nível, recuperado no Descanso Longo e pela metade no Curto. Gaste Vigor livremente, como Ação Bônus, para sustentar o grupo: curar, limpar condições ou conceder PV Temporários.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 63 },
+    rules: "Hebe não usa Mana: o Vigor (2 × nível) volta no Descanso Longo e paga, com Ação Bônus, cura, limpeza de condições, PV Temporários ou o reerguer de um aliado a 0 PV.",
+    moves: [
+      { name: "Curar", cost: "1", activation: "Ação Bônus (1×/turno)", description: "Um aliado a até 9 m recupera 1d8 PV." },
+      { name: "Limpar condição", cost: "2", activation: "Ação Bônus (1×/turno)", description: "Remova de um aliado uma condição entre Apavorado, Atordoado, Cego, Envenenado ou Lento." },
+      { name: "PV Temporários", cost: "2", activation: "Ação Bônus (1×/turno)", description: "Um aliado ganha PV Temporários iguais ao seu nível." },
+      { name: "Reerguer", cost: "3", activation: "Ação Bônus (1×/turno)", description: "Um aliado a 0 PV volta com 1 PV e de pé, sem gastar o movimento dele." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 133 },
   }],
   Eros: [{
     id: "eros-vinculos",
     title: "Vínculos",
-    rules: "Como Ação, ligue duas criaturas a 12 m, com TR para inimigos. Mantenha no máximo Vínculos iguais ao modificador de Conjuração. Guardião, entre aliados - cada um pode redirecionar ao outro metade do dano que sofreria. Espelho, entre inimigos - metade do dano que um sofre, o outro também sofre. Grilhão, entre inimigos - não podem se afastar mais de 6 m nem ajudar um ao outro.",
+    rules: "Com uma Ação você liga duas criaturas a 12 m (no máximo tantos Vínculos quanto a Conjuração). Guardião reparte dano entre aliados, Espelho devolve metade do dano entre inimigos e Grilhão os prende a 6 m um do outro.",
     choices: [{
       id: "tipo-atual",
       label: "Tipo em uso",
@@ -270,13 +368,21 @@ export const FILIATION_SIGNATURES: Record<keyof typeof FILIATIONS, FiliationSign
         { value: "grilhao", label: "Grilhão - distância e cooperação limitadas" },
       ],
     }],
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 64 },
+    moves: [
+      { name: "Vínculo Guardião", cost: "Vínculo", activation: "Ação", description: "Entre aliados: cada um pode redirecionar para o outro metade do dano que sofreria." },
+      { name: "Vínculo Espelho", cost: "Vínculo", activation: "Ação", description: "Entre inimigos: metade do dano que um sofre, o outro também sofre." },
+      { name: "Vínculo Grilhão", cost: "Vínculo", activation: "Ação", description: "Entre inimigos: não podem se afastar mais de 6 m um do outro nem ajudar um ao outro." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 135 },
   }],
   Nyx: [{
     id: "nyx-escuridao",
     title: "Escuridão",
-    rules: "Como Ação Bônus, crie uma zona de escuridão mágica de 3 m a até 12 m, ou mova uma zona sua em até 6 m. Você mantém uma zona por vez; só você e aliados enxergam dentro. Suas habilidades ficam mais fortes contra alvos na escuridão.",
-    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 65 },
+    rules: "Com Ação Bônus você cria uma zona de escuridão de 3 m a até 12 m, ou move a sua em até 6 m (uma por vez). Só você e os aliados enxergam dentro dela, e suas habilidades ficam mais fortes contra quem está na escuridão.",
+    moves: [
+      { name: "Zona de escuridão", cost: "Sem custo", activation: "Ação Bônus", description: "Crie uma zona de escuridão mágica de 3 m a até 12 m, ou mova uma zona sua em até 6 m (uma zona por vez)." },
+    ],
+    source: { book: "Livro do Jogador - Semideuses RPG 3e", pdfPage: 137 },
   }],
 };
 
@@ -297,6 +403,12 @@ export function ensureFiliationSignatures(
       };
     }
     const official = makeOfficialState(definition, filiation);
+    // Assinatura oficial que o jogador nunca editou acompanha o texto atual do livro; escolhas e notas ficam.
+    const snapshot = entry.officialSnapshot;
+    const pristine = !entry.custom && snapshot && entry.rules === snapshot.rules && plainMoves(entry.moves) === plainMoves(movesFromRules(entry.sourceId, snapshot.rules));
+    if (pristine && snapshot.rules !== definition.rules) {
+      return { ...official, id: entry.id, selectedOptions: { ...official.selectedOptions, ...entry.selectedOptions }, notes: entry.notes };
+    }
     return {
       ...official,
       ...entry,
