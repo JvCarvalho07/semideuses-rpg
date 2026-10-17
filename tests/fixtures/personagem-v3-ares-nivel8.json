@@ -1,0 +1,26 @@
+{
+  "version": 3,
+  "name": "Personagem de teste",
+  "filiation": "Ares",
+  "origin": "Semideus Grego",
+  "background": "Sobrevivente",
+  "level": 8,
+  "hp": 85,
+  "hpMax": 88,
+  "mana": 50,
+  "manaMax": 52,
+  "castingAttribute": "for",
+  "attributes": { "for": 20, "des": 13, "con": 16, "int": 10, "sab": 12, "car": 8 },
+  "saveProficiencies": ["for", "con"],
+  "skillRanks": {
+    "atletismo": 1, "intuicao": 1, "medicina": 1, "percepcao": 1, "sobrevivencia": 1, "intimidacao": 1,
+    "Sobrevivência": 2, "Atletismo": 1, "Percepção": 1, "Medicina": 1, "Intuição": 1, "Intimidação": 1
+  },
+  "speed": 6,
+  "initiativeExtra": 2,
+  "caExtra": 7,
+  "equipment": [
+    { "id": "e1", "name": "Armadura Hoplita de Bronze", "type": "Armadura", "quantity": 1, "equipped": false, "armorClass": 0, "properties": "Armadura média. CA base 15 + modificador de DES, máximo +2." },
+    { "id": "e2", "name": "Escudo de teste", "type": "Escudo", "quantity": 1, "equipped": true, "armorClass": 0, "properties": "+2 à CA." }
+  ]
+}

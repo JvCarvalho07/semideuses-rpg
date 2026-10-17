@@ -1,3 +1,5 @@
+import { SKILL_LIST, type ArmorCategory } from "./rules";
+
 export type AttributeKey = "for" | "des" | "con" | "int" | "sab" | "car";
 export type AbilityCategory = "abilities" | "filiation" | "path" | "skills" | "talents";
 
@@ -23,6 +25,8 @@ export type Equipment = {
   quantity: number;
   equipped: boolean;
   armorClass: number;
+  /** Leve soma DES; Média soma DES (máx. +2); Pesada é fixa. Vazio = armorClass já é a CA final. */
+  armorCategory?: ArmorCategory | "";
   attack: string;
   damage: string;
   properties: string;
@@ -50,6 +54,8 @@ export type FiliationSignatureState = {
 export type SignatureResource = {
   name: string;
   current: number;
+  /** Só a Maré de Poseidon passa de 0 para baixo (−3). */
+  min?: number;
   max: number;
   unit: string;
 };
@@ -67,6 +73,25 @@ export type SignatureOfficialSnapshot = {
   title: string;
   rules: string;
   pdfPage: number;
+};
+
+export type EffectKind = "Bênção" | "Maldição";
+
+/** Bênção ou maldição em vigor sobre o personagem. Só as ativas contam nos números. */
+export type Effect = {
+  id: string;
+  kind: EffectKind;
+  name: string;
+  /** Quem concedeu ou lançou (deus, monstro, item). */
+  source: string;
+  duration: string;
+  description: string;
+  active: boolean;
+  /** Bônus (ou penalidade, se negativo) aplicados enquanto estiver ativa. */
+  ca: number;
+  initiative: number;
+  speed: number;
+  hpMax: number;
 };
 
 export type ImportReport = {
@@ -87,19 +112,25 @@ export type CharacterSheet = {
   player: string;
   level: number;
   hp: number;
-  hpMax: number;
+  /** null = calculado pelo livro (Dado de Vida da filiação + CON). */
+  hpMaxOverride: number | null;
   hpTemp: number;
   mana: number;
-  manaMax: number;
+  /** null = calculado pelo livro (6 + Conjuração, depois 2 + Conjuração por nível). */
+  manaMaxOverride: number | null;
   divineResource: number;
+  /** null = teto do recurso calculado pelo livro. */
+  resourceMaxOverride: number | null;
   favor: number;
   sustain: number;
   castingAttribute: AttributeKey;
   castingDcOverride: number | null;
   attributes: Record<AttributeKey, number>;
   saveProficiencies: AttributeKey[];
-  skillRanks: Record<string, number>;
-  speed: number;
+  /** Ajustes manuais por perícia (0 = sem treino, 1 = proficiente, 2 = especialista). Sem ajuste, vale o cálculo do livro. */
+  /** Perícia do Dom que recebe Especialização (só para quem tem esse Dom). */
+  domSkill: string;
+  skillRankOverrides: Record<string, number>;
   initiativeExtra: number;
   caExtra: number;
   caOverride: number | null;
@@ -112,6 +143,7 @@ export type CharacterSheet = {
   filiationSignatures: Record<string, FiliationSignatureState[]>;
   abilityGroups: Record<AbilityCategory, Ability[]>;
   equipment: Equipment[];
+  effects: Effect[];
   personality: {
     trait: string;
     ideal: string;
@@ -136,42 +168,35 @@ export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
 };
 
 export const FILIATIONS = {
-  Zeus: { resource: "Cargas de Raio", max: 6, accent: "#2f8cff", light: "#a8d8ff", deep: "#102a4f", secondary: "#f6c84f", mark: "Ζ" },
-  Poseidon: { resource: "Maré", max: 6, accent: "#00a8b5", light: "#83ebdf", deep: "#073849", secondary: "#2e73d2", mark: "Π" },
-  Hades: { resource: "Almas", max: 10, accent: "#7a5bd7", light: "#c6b3ff", deep: "#1d142e", secondary: "#3a2b55", mark: "Η" },
-  Atena: { resource: "Comando", max: 10, accent: "#d29a28", light: "#ffe08a", deep: "#433510", secondary: "#456f87", mark: "ΑΘ" },
-  Ares: { resource: "Fúria", max: 10, accent: "#e24a34", light: "#ff9b75", deep: "#3a1115", secondary: "#761e22", mark: "ΑΡ" },
-  Apolo: { resource: "Marca Solar", max: 6, accent: "#ffb21c", light: "#ffe384", deep: "#4c2c08", secondary: "#e15b2b", mark: "ΑΠ" },
-  Hefesto: { resource: "Pontos de Máquina", max: 10, accent: "#f46b2a", light: "#ffb07f", deep: "#3a1b10", secondary: "#5e3a32", mark: "ΗΦ" },
-  Hermes: { resource: "Ritmo", max: 10, accent: "#23b889", light: "#92efd0", deep: "#0d3d33", secondary: "#d6a837", mark: "ΕΡ" },
-  Afrodite: { resource: "Encanto", max: 10, accent: "#e64d88", light: "#ffafd0", deep: "#40142d", secondary: "#8d4cc7", mark: "ΑΦ" },
-  Deméter: { resource: "Crescimento", max: 8, accent: "#78ad35", light: "#cce88b", deep: "#263a14", secondary: "#c58c2d", mark: "Δ" },
-  Dionísio: { resource: "Delírio", max: 10, accent: "#9c49c9", light: "#dda3f2", deep: "#35143f", secondary: "#d44279", mark: "ΔΙ" },
-  Ártemis: { resource: "Marca da Presa", max: 6, accent: "#4c98a3", light: "#a9e0df", deep: "#17363b", secondary: "#a8bcc6", mark: "ΑΡ" },
-  Hécate: { resource: "Pontos de Feitiço", max: 10, accent: "#6b55e8", light: "#bdb2ff", deep: "#201848", secondary: "#c24fc6", mark: "ΕΚ" },
-  Íris: { resource: "Espectro", max: 6, accent: "#16b9c7", light: "#8ff0ea", deep: "#10404c", secondary: "#ed5e9e", mark: "Ι" },
-  Nêmesis: { resource: "Dívidas", max: 10, accent: "#b66b3f", light: "#eab28f", deep: "#382118", secondary: "#34404f", mark: "Ν" },
-  Hipnos: { resource: "Sonolência", max: 10, accent: "#5d75e8", light: "#b5c1ff", deep: "#1b234b", secondary: "#8568c8", mark: "Υ" },
-  Morfeu: { resource: "Fios do Sonho", max: 8, accent: "#7958c7", light: "#c5b3ef", deep: "#24183f", secondary: "#3669a9", mark: "Μ" },
-  Nike: { resource: "Ímpeto", max: 10, accent: "#e69b18", light: "#f5d574", deep: "#3a290d", secondary: "#277b6a", mark: "ΝΙ" },
-  Tique: { resource: "Dados de Sorte", max: 6, accent: "#16a982", light: "#84e8c7", deep: "#0e3c33", secondary: "#e8aa32", mark: "Τ" },
-  Tânatos: { resource: "Marcas da Morte", max: 6, accent: "#667181", light: "#b7c0cb", deep: "#171b20", secondary: "#2b3038", mark: "Θ" },
-  Éolo: { resource: "Ventania", max: 6, accent: "#349dd0", light: "#afe6f5", deep: "#12354a", secondary: "#8ac8e3", mark: "ΑΙ" },
-  Circe: { resource: "Reagentes", max: 10, accent: "#c54c88", light: "#efa3cb", deep: "#3d1630", secondary: "#6d4bc4", mark: "Κ" },
-  Perséfone: { resource: "Estação", max: 2, accent: "#b45872", light: "#e9a4af", deep: "#3a1922", secondary: "#5f8f52", mark: "ΠΕ" },
-  Hebe: { resource: "Néctar", max: 6, accent: "#27af8b", light: "#9ae5cf", deep: "#0c4034", secondary: "#efb542", mark: "ΗΒ" },
-  Eros: { resource: "Vínculos", max: 6, accent: "#e74462", light: "#ff9fac", deep: "#421420", secondary: "#ee8c43", mark: "Ε" },
-  Nyx: { resource: "Escuridão", max: 10, accent: "#4e55c7", light: "#969cf0", deep: "#15172e", secondary: "#202554", mark: "ΝΥ" },
+  Zeus: { accent: "#2f8cff", light: "#a8d8ff", deep: "#102a4f", secondary: "#f6c84f", mark: "Ζ" },
+  Poseidon: { accent: "#00a8b5", light: "#83ebdf", deep: "#073849", secondary: "#2e73d2", mark: "Π" },
+  Hades: { accent: "#7a5bd7", light: "#c6b3ff", deep: "#1d142e", secondary: "#3a2b55", mark: "Η" },
+  Atena: { accent: "#d29a28", light: "#ffe08a", deep: "#433510", secondary: "#456f87", mark: "ΑΘ" },
+  Ares: { accent: "#e24a34", light: "#ff9b75", deep: "#3a1115", secondary: "#761e22", mark: "ΑΡ" },
+  Apolo: { accent: "#ffb21c", light: "#ffe384", deep: "#4c2c08", secondary: "#e15b2b", mark: "ΑΠ" },
+  Hefesto: { accent: "#f46b2a", light: "#ffb07f", deep: "#3a1b10", secondary: "#5e3a32", mark: "ΗΦ" },
+  Hermes: { accent: "#23b889", light: "#92efd0", deep: "#0d3d33", secondary: "#d6a837", mark: "ΕΡ" },
+  Afrodite: { accent: "#e64d88", light: "#ffafd0", deep: "#40142d", secondary: "#8d4cc7", mark: "ΑΦ" },
+  Deméter: { accent: "#78ad35", light: "#cce88b", deep: "#263a14", secondary: "#c58c2d", mark: "Δ" },
+  Dionísio: { accent: "#9c49c9", light: "#dda3f2", deep: "#35143f", secondary: "#d44279", mark: "ΔΙ" },
+  Ártemis: { accent: "#4c98a3", light: "#a9e0df", deep: "#17363b", secondary: "#a8bcc6", mark: "ΑΡ" },
+  Hécate: { accent: "#6b55e8", light: "#bdb2ff", deep: "#201848", secondary: "#c24fc6", mark: "ΕΚ" },
+  Íris: { accent: "#16b9c7", light: "#8ff0ea", deep: "#10404c", secondary: "#ed5e9e", mark: "Ι" },
+  Nêmesis: { accent: "#b66b3f", light: "#eab28f", deep: "#382118", secondary: "#34404f", mark: "Ν" },
+  Hipnos: { accent: "#5d75e8", light: "#b5c1ff", deep: "#1b234b", secondary: "#8568c8", mark: "Υ" },
+  Morfeu: { accent: "#7958c7", light: "#c5b3ef", deep: "#24183f", secondary: "#3669a9", mark: "Μ" },
+  Nike: { accent: "#e69b18", light: "#f5d574", deep: "#3a290d", secondary: "#277b6a", mark: "ΝΙ" },
+  Tique: { accent: "#16a982", light: "#84e8c7", deep: "#0e3c33", secondary: "#e8aa32", mark: "Τ" },
+  Tânatos: { accent: "#667181", light: "#b7c0cb", deep: "#171b20", secondary: "#2b3038", mark: "Θ" },
+  Éolo: { accent: "#349dd0", light: "#afe6f5", deep: "#12354a", secondary: "#8ac8e3", mark: "ΑΙ" },
+  Circe: { accent: "#c54c88", light: "#efa3cb", deep: "#3d1630", secondary: "#6d4bc4", mark: "Κ" },
+  Perséfone: { accent: "#b45872", light: "#e9a4af", deep: "#3a1922", secondary: "#5f8f52", mark: "ΠΕ" },
+  Hebe: { accent: "#27af8b", light: "#9ae5cf", deep: "#0c4034", secondary: "#efb542", mark: "ΗΒ" },
+  Eros: { accent: "#e74462", light: "#ff9fac", deep: "#421420", secondary: "#ee8c43", mark: "Ε" },
+  Nyx: { accent: "#4e55c7", light: "#969cf0", deep: "#15172e", secondary: "#202554", mark: "ΝΥ" },
 } as const;
 
-export const SKILLS: Array<[string, AttributeKey]> = [
-  ["Atletismo", "for"], ["Acrobacia", "des"], ["Furtividade", "des"],
-  ["Prestidigitação", "des"], ["Saber Mítico", "int"], ["História", "int"],
-  ["Investigação", "int"], ["Natureza", "int"], ["Religião", "int"],
-  ["Intuição", "sab"], ["Lidar com Animais", "sab"], ["Medicina", "sab"],
-  ["Percepção", "sab"], ["Sobrevivência", "sab"], ["Atuação", "car"],
-  ["Enganação", "car"], ["Intimidação", "car"], ["Persuasão", "car"],
-];
+export const SKILLS: Array<[string, AttributeKey]> = SKILL_LIST.map(([name, key]) => [name, key]);
 
 export const ABILITY_META: Record<AbilityCategory, { title: string; description: string }> = {
   abilities: { title: "Habilidades e traços", description: "Origem, antecedente e características gerais." },
@@ -201,7 +226,7 @@ const ability = (
 });
 
 export const INITIAL_SHEET: CharacterSheet = {
-  version: 3,
+  version: 4,
   avatarDataUrl: "",
   name: "",
   legendDestiny: "",
@@ -212,19 +237,20 @@ export const INITIAL_SHEET: CharacterSheet = {
   player: "",
   level: 1,
   hp: 0,
-  hpMax: 0,
+  hpMaxOverride: null,
   hpTemp: 0,
   mana: 0,
-  manaMax: 0,
+  manaMaxOverride: null,
   divineResource: 0,
+  resourceMaxOverride: null,
   favor: 0,
   sustain: 0,
   castingAttribute: "sab",
   castingDcOverride: null,
   attributes: { for: 10, des: 10, con: 10, int: 10, sab: 10, car: 10 },
   saveProficiencies: [],
-  skillRanks: {},
-  speed: 0,
+  domSkill: "",
+  skillRankOverrides: {},
   initiativeExtra: 0,
   caExtra: 0,
   caOverride: null,
@@ -237,6 +263,7 @@ export const INITIAL_SHEET: CharacterSheet = {
   filiationSignatures: {},
   abilityGroups: { abilities: [], filiation: [], path: [], skills: [], talents: [] },
   equipment: [],
+  effects: [],
   personality: {
     trait: "",
     ideal: "",
