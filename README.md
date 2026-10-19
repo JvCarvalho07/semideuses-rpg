@@ -9,7 +9,9 @@ qualquer dispositivo sem depender de conta ou servidor.
 **[Usar a ficha digital](https://jvcarvalho07.github.io/semideuses-rpg/)**
 
 A ficha começa vazia, salva os dados somente no navegador e permite
-exportar/importar JSON. A versão em PDF é organizada automaticamente em quantas
+exportar/importar JSON. Em **Fichas** ficam todos os personagens salvos
+neste navegador: dá para trocar, criar, duplicar e apagar, e importar um JSON
+cria uma ficha nova (ou substitui a de mesmo nome). A versão em PDF é organizada automaticamente em quantas
 páginas o conteúdo precisar, com escolha entre os formatos A3, A4 e A5.
 
 ## O que você encontra
