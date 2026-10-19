@@ -18,6 +18,8 @@ import { EquipmentAdder, EquipmentRow } from "./ui/equipment";
 import { Fact } from "./ui/facts";
 import { TAB_SECTION_IDS, TabBar, VitalsDock, useActiveSection, useScrolledPast } from "./ui/navigation";
 import { EffectsSection } from "./ui/effects";
+import { LibraryPanel } from "./ui/library";
+import { type Library, findByName, loadLibrary, newSheetId, readSheet, removeSheet, setActive, sortedEntries, writeSheet } from "./library";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -29,6 +31,13 @@ export default function Home() {
   const [sheet, setSheet] = useState<CharacterSheet>(() => ({ ...INITIAL_SHEET }));
   const [hydrated, setHydrated] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [library, setLibrary] = useState<Library>({ activeId: "", entries: [] });
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const libraryRef = useRef(library);
+  libraryRef.current = library;
+  // Ao abrir uma ficha da lista, não conta como edição (não muda a data dela).
+  const skipSaveRef = useRef(false);
+  const storageWarnedRef = useRef(false);
   const [importNotice, setImportNotice] = useState<string[]>([]);
   const [equipmentFilter, setEquipmentFilter] = useState("Todos");
   const [equipmentSearch, setEquipmentSearch] = useState("");
@@ -78,21 +87,23 @@ export default function Home() {
   }, { scope: rootRef });
 
   useEffect(() => {
-    const stored = localStorage.getItem("semideuses-sheet-v3");
-    if (!stored) {
-      setHydrated(true);
-      return;
-    }
     try {
-      const parsed = JSON.parse(stored);
-      const result = normalizeImportedSheet(parsed);
-      if (result.recognized) {
-        setSheet(result.sheet);
-        // Quem já usava a ficha antiga vê o que a migração para a versão 4 ajustou.
-        if (Math.floor(Number(parsed?.version)) < 4 && result.report.adjustments.length) setImportNotice(result.report.adjustments);
+      const { library: loaded } = loadLibrary(localStorage);
+      if (loaded.activeId) {
+        const parsed = readSheet(localStorage, loaded.activeId);
+        const result = parsed ? normalizeImportedSheet(parsed) : null;
+        if (result?.recognized) {
+          skipSaveRef.current = true;
+          setSheet(result.sheet);
+          // Quem já usava a ficha antiga vê o que a migração para a versão 4 ajustou.
+          if (Math.floor(Number((parsed as { version?: unknown }).version)) < 4 && result.report.adjustments.length) setImportNotice(result.report.adjustments);
+        }
+        setLibrary(loaded);
+      } else {
+        setLibrary({ activeId: newSheetId(), entries: [] });
       }
     } catch {
-      localStorage.removeItem("semideuses-sheet-v3");
+      setLibrary({ activeId: newSheetId(), entries: [] });
     } finally {
       setHydrated(true);
     }
@@ -100,7 +111,17 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem("semideuses-sheet-v3", JSON.stringify(sheet));
+    if (skipSaveRef.current) {
+      skipSaveRef.current = false;
+      return;
+    }
+    try {
+      setLibrary(writeSheet(localStorage, libraryRef.current, libraryRef.current.activeId, sheet));
+    } catch {
+      if (!storageWarnedRef.current) window.alert("O navegador ficou sem espaço para salvar as fichas. Exporte o JSON desta ficha e apague fichas que não usa mais (ou fotos grandes).");
+      storageWarnedRef.current = true;
+      return;
+    }
     setSaved(true);
     const timer = window.setTimeout(() => setSaved(false), 1000);
     return () => window.clearTimeout(timer);
@@ -236,7 +257,9 @@ export default function Home() {
       try {
         const result = normalizeImportedSheet(JSON.parse(String(reader.result)));
         if (!result.recognized) throw new Error("Formato inválido");
-        setSheet(result.sheet);
+        const twin = findByName(libraryRef.current, result.sheet.name);
+        const replace = twin ? window.confirm(`Já existe uma ficha chamada "${twin.name}". OK substitui essa ficha pelo arquivo importado; Cancelar cria uma ficha separada.`) : false;
+        storeAndOpen(result.sheet, replace && twin ? twin.id : newSheetId());
         setImportNotice([...result.report.adjustments, ...(result.report.unknownFields.length ? [`Campos desconhecidos preservados: ${result.report.unknownFields.join(", ")}`] : [])]);
       } catch {
         window.alert("Este arquivo não contém uma ficha compatível.");
@@ -246,16 +269,85 @@ export default function Home() {
     event.target.value = "";
   }
 
-  function newSheet() {
-    if (!window.confirm("Criar uma nova ficha? A ficha atual pode ser recuperada pelo JSON exportado.")) return;
-    setSheet({
+  function blankSheet(): CharacterSheet {
+    return {
       ...INITIAL_SHEET,
       name: "",
       player: "",
       abilityGroups: { abilities: [], filiation: [], path: [], skills: [], talents: [] },
       equipment: [],
+      effects: [],
       personality: { trait: "", ideal: "", bond: "", flaw: "", backgroundTrait: "", backgroundBond: "", appearance: "", history: "", notes: "" },
-    });
+    };
+  }
+
+  /** Grava a ficha com esse id (nova ou substituída) e passa a mostrá-la. */
+  function storeAndOpen(next: CharacterSheet, id: string) {
+    try {
+      setLibrary(writeSheet(localStorage, libraryRef.current, id, next));
+    } catch {
+      window.alert("O navegador ficou sem espaço para salvar outra ficha. Apague fichas que não usa mais e tente de novo.");
+      return;
+    }
+    skipSaveRef.current = true;
+    setSheet(next);
+    setImportNotice([]);
+    setLibraryOpen(false);
+    window.scrollTo({ top: 0 });
+  }
+
+  function newSheet() {
+    storeAndOpen(blankSheet(), newSheetId());
+  }
+
+  function openSheet(id: string) {
+    if (id === libraryRef.current.activeId) {
+      setLibraryOpen(false);
+      return;
+    }
+    const parsed = readSheet(localStorage, id);
+    const result = parsed ? normalizeImportedSheet(parsed) : null;
+    if (!result?.recognized) {
+      window.alert("Não foi possível abrir esta ficha.");
+      return;
+    }
+    setLibrary(setActive(localStorage, libraryRef.current, id));
+    skipSaveRef.current = true;
+    setSheet(result.sheet);
+    setImportNotice([]);
+    setLibraryOpen(false);
+    window.scrollTo({ top: 0 });
+  }
+
+  function duplicateSheet(id: string) {
+    const source = id === libraryRef.current.activeId ? sheet : (() => {
+      const parsed = readSheet(localStorage, id);
+      const result = parsed ? normalizeImportedSheet(parsed) : null;
+      return result?.recognized ? result.sheet : null;
+    })();
+    if (!source) return;
+    storeAndOpen({ ...source, name: `${source.name || "Personagem"} (cópia)` }, newSheetId());
+  }
+
+  function deleteSheet(id: string) {
+    const entry = libraryRef.current.entries.find((item) => item.id === id);
+    const name = entry?.name || "personagem sem nome";
+    if (!window.confirm(`Apagar a ficha de ${name}? Isso não pode ser desfeito. Se quiser guardar uma cópia, exporte o JSON antes.`)) return;
+    const next = removeSheet(localStorage, libraryRef.current, id);
+    if (id !== libraryRef.current.activeId) {
+      setLibrary(next);
+      return;
+    }
+    setLibrary(next);
+    if (next.activeId) {
+      libraryRef.current = { ...next, activeId: "" };
+      openSheet(next.activeId);
+      setLibraryOpen(true);
+    } else {
+      libraryRef.current = next;
+      storeAndOpen(blankSheet(), newSheetId());
+      setLibraryOpen(true);
+    }
   }
 
   function printSheet() {
@@ -297,7 +389,7 @@ export default function Home() {
         <nav><a href="#combate">Combate</a><a href="#habilidades">Habilidades</a><a href="#equipamentos">Equipamentos</a><a href="#historia">História</a></nav>
         <div className="document-actions">
           <span className={saved ? "save-visible" : ""}>Salvo</span>
-          <button type="button" onClick={newSheet}>Nova</button>
+          <button type="button" className="library-button" onClick={() => setLibraryOpen(true)} aria-haspopup="dialog">Fichas{library.entries.length > 1 && <b>{library.entries.length}</b>}</button>
           <button type="button" onClick={() => importRef.current?.click()}>Importar</button>
           <button type="button" onClick={exportJson}>JSON</button>
           <label className="pdf-format-control">
@@ -312,6 +404,17 @@ export default function Home() {
           <input ref={importRef} type="file" accept=".json,application/json" hidden onChange={importJson} />
         </div>
       </header>
+      <LibraryPanel
+        open={libraryOpen}
+        entries={sortedEntries(library)}
+        activeId={library.activeId}
+        onClose={() => setLibraryOpen(false)}
+        onOpen={openSheet}
+        onNew={newSheet}
+        onImport={() => importRef.current?.click()}
+        onDuplicate={duplicateSheet}
+        onDelete={deleteSheet}
+      />
       {importNotice.length > 0 && (
         <aside className="import-notice" role="status">
           <strong>Importação ajustada</strong>

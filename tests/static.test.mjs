@@ -43,7 +43,11 @@ test("build estático contém a ficha limpa e as ações principais", async () =
   assert.match(model, /version: 4,/);
   assert.match(model, /filiationSignatures: \{\},/);
   assert.doesNotMatch(model, /Héstia|Hestia/);
-  assert.match(app, /semideuses-sheet-v3/);
+  // várias fichas: a ficha única antiga (semideuses-sheet-v3) é migrada para a lista
+  const library = await readFile(new URL("../src/library.ts", import.meta.url), "utf8");
+  assert.match(library, /semideuses-sheet-v3/);
+  assert.match(library, /semideuses-library-v1/);
+  assert.match(app, /LibraryPanel/);
   assert.match(app, /exportJson/);
   assert.match(app, /window\.print/);
   assert.match(app, /Formato do PDF/);
