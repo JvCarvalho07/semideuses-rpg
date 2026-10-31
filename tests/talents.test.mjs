@@ -11,7 +11,9 @@ const base = {
   hp: 10, divineResource: 0, speedOverride: null, initiativeExtra: 0, initiativeOverride: null,
   caExtra: 0, caOverride: null, perceptionOverride: null, equipment: [], effects: [],
 };
-const talent = (name, extra) => ({ name, extra });
+// talento adicionado pela lista do livro (ligado); `legacy` = já estava na ficha antes
+const talent = (name, extra = {}) => ({ name, extra: { fromCatalog: true, ...extra } });
+const legacy = (name) => ({ name, extra: { sourceId: "", custom: false } });
 const withTalents = (talents, extra = {}) => ({ ...base, ...extra, abilityGroups: { talents } });
 
 test("catálogo do Cap. 10: nomes únicos e os quatro grupos", () => {
@@ -58,6 +60,16 @@ test("Armadura Natural e Especialista em Armadura mudam a CA", () => {
   assert.equal(deriveStats(withTalents([talent("Especialista em Armadura", { selectedOptions: { choice: "Média" } })], hoplita)).armorClass.value, 17);
   // categoria diferente da armadura vestida não dá bônus
   assert.equal(deriveStats(withTalents([talent("Especialista em Armadura", { selectedOptions: { choice: "Leve" } })], hoplita)).armorClass.value, 16);
+});
+
+test("talento que já estava na ficha não muda números sozinho", () => {
+  const before = deriveStats(withTalents([]));
+  const old = deriveStats(withTalents([legacy("Pele de Bronze"), legacy("Atleta"), legacy("Reservas Divinas")]));
+  assert.equal(old.hpMax.value, before.hpMax.value);
+  assert.equal(old.manaMax.value, before.manaMax.value);
+  assert.deepEqual(old.skills.map((skill) => skill.rank), before.skills.map((skill) => skill.rank));
+  // escrito pelo Mestre (custom) também não conta, mesmo ligado
+  assert.equal(talentEffects([talent("Atleta", { custom: true })]).expertise.length, 0);
 });
 
 test("Lutador Agressivo e Reflexos de Combate marcam Vantagem na Iniciativa", () => {

@@ -487,6 +487,22 @@ export function talentChoice(entry: TalentLike): string {
   return nestedChoice(entry.extra);
 }
 
+function nestedFlag(extra: unknown, key: string, depth = 0): boolean {
+  if (!extra || typeof extra !== "object" || depth > 4) return false;
+  const record = extra as Record<string, unknown>;
+  if (record[key] === true) return true;
+  return nestedFlag(record.extra, key, depth + 1);
+}
+
+/**
+ * Talento ligado ao livro: adicionado pela lista (ou o jogador escolheu "Usar texto do livro").
+ * Só esses mostram o texto do livro e contam sozinhos na ficha; talentos que já estavam na ficha
+ * continuam com o texto e os números de antes.
+ */
+export function isLinkedTalent(entry: TalentLike): boolean {
+  return nestedFlag(entry.extra, "fromCatalog") && !nestedCustom(entry.extra) && Boolean(officialTalentFor(entry));
+}
+
 /** Texto próprio do jogador ou do Mestre: a ficha mostra o que está escrito, não o texto do livro. */
 export function isCustomTalent(entry: TalentLike): boolean {
   return nestedCustom(entry.extra);

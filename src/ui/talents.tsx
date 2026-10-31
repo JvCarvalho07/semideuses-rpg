@@ -5,7 +5,7 @@ import {
   OFFICIAL_TALENTS,
   TALENT_GROUPS,
   type OfficialTalent,
-  isCustomTalent,
+  isLinkedTalent,
   officialTalentFor,
   slug,
   talentAutoLabel,
@@ -48,7 +48,7 @@ export function talentEntry(talent: OfficialTalent, id: string, level: number): 
     recharge: "",
     description: talentDescription(talent),
     notes: "",
-    extra: { sourceId: talent.id, selectedOptions: {}, custom: false },
+    extra: { sourceId: talent.id, selectedOptions: {}, custom: false, fromCatalog: true },
   };
 }
 
@@ -166,7 +166,9 @@ export function TalentCard({
   onRemove: () => void;
 }) {
   const official = officialTalentFor(ability);
-  const custom = !official || isCustomTalent(ability);
+  const linked = isLinkedTalent(ability);
+  // Talento que já estava na ficha: mostra o texto guardado, sem trocar nada.
+  const custom = !linked;
   const [mode, setMode] = useState<"compact" | "details" | "edit">(!ability.name ? "edit" : startOpen ? "details" : "compact");
   useEffect(() => {
     if (forceOpen !== undefined) setMode(forceOpen ? "details" : "compact");
@@ -183,8 +185,14 @@ export function TalentCard({
   };
   // Editar um talento do livro guarda uma versão própria, com o texto atual como ponto de partida.
   const editOwnVersion = () => {
-    if (official && !custom) onUpdate({ ...ability, description: talentDescription(official), extra: { ...(ability.extra || {}), sourceId: official.id, custom: true } });
+    if (official && linked) onUpdate({ ...ability, description: talentDescription(official), extra: { ...(ability.extra || {}), sourceId: official.id, custom: true, fromCatalog: false } });
     setMode("edit");
+  };
+  // Opcional: liga um talento antigo ao livro (texto do livro e efeitos automáticos). O texto antigo fica guardado.
+  const useBookText = () => {
+    if (!official) return;
+    if (!window.confirm(`Usar o texto do livro em ${official.name}? O efeito automático dele passa a contar na ficha. O seu texto continua guardado.`)) return;
+    onUpdate({ ...ability, extra: { ...(ability.extra || {}), sourceId: official.id, custom: false, fromCatalog: true } });
   };
 
   const effects = official && !custom ? official.effects : [];
@@ -227,7 +235,8 @@ export function TalentCard({
           {autoLabel && !custom && <p className="talent-auto">{autoLabel}</p>}
           {ability.notes && <p className="talent-notes"><strong>Observações:</strong> {ability.notes}</p>}
           <div className="talent-detail-actions">
-            <button type="button" className="ability-edit-link" onClick={editOwnVersion}>{official && !custom ? "Escrever minha versão" : "Editar"}</button>
+            <button type="button" className="ability-edit-link" onClick={editOwnVersion}>{linked ? "Escrever minha versão" : "Editar"}</button>
+            {official && !linked && <button type="button" className="ability-edit-link" onClick={useBookText}>Usar texto do livro</button>}
             <button type="button" className="remove-action" onClick={remove}>Remover</button>
           </div>
         </div>

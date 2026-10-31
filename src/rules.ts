@@ -1,7 +1,7 @@
 // Regras do Livro do Jogador (3ª edição) em funções puras.
 // Imports de runtime só de arquivos sem dependências e com a extensão .ts — assim o Node roda os testes direto.
 import type { AttributeKey } from "./model";
-import { officialTalentFor, talentChoice, type TalentLike } from "./officialTalents.ts";
+import { isLinkedTalent, officialTalentFor, talentChoice, type TalentLike } from "./officialTalents.ts";
 
 export const ATTRIBUTE_KEYS: AttributeKey[] = ["for", "des", "con", "int", "sab", "car"];
 
@@ -389,6 +389,8 @@ export function talentEffects(talents: ReadonlyArray<TalentLike> = []): TalentEf
   const result: TalentEffects = { expertise: [], hpPerLevel: 0, manaPerLevel: 0, unarmoredBase: null, armorBonus: [], initiativeAdvantage: false };
   const seen = new Set<string>();
   for (const entry of talents) {
+    // Só talentos ligados ao livro; os que já estavam na ficha não mudam números sozinhos.
+    if (!isLinkedTalent(entry)) continue;
     const talent = officialTalentFor(entry);
     if (!talent?.auto) continue;
     const choice = talentChoice(entry);
