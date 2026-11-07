@@ -18,6 +18,8 @@ import { EquipmentAdder, EquipmentRow } from "./ui/equipment";
 import { Fact } from "./ui/facts";
 import { TAB_SECTION_IDS, TabBar, VitalsDock, useActiveSection, useScrolledPast } from "./ui/navigation";
 import { EffectsSection } from "./ui/effects";
+import { SummonsSection } from "./ui/summons";
+import { availablePresets, summonLimit } from "./summons";
 import { LibraryPanel } from "./ui/library";
 import { type Library, findByName, loadLibrary, newSheetId, readSheet, removeSheet, setActive, sortedEntries, writeSheet } from "./library";
 
@@ -691,6 +693,16 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        <SummonsSection
+          summons={sheet.summons}
+          presets={availablePresets(Object.values(sheet.abilityGroups).flat(), sheet.level)}
+          limit={summonLimit(Object.values(sheet.abilityGroups).flat(), sheet.level)}
+          level={sheet.level}
+          castingModifier={derived.castingModifier}
+          proficiency={derived.prof}
+          onChange={(summons) => patch("summons", summons)}
+        />
 
         <EffectsSection effects={sheet.effects} onChange={(effects) => patch("effects", effects)} />
 

@@ -2752,3 +2752,41 @@ section[id], #combate { scroll-margin-top: 72px; }
   .number-control .number-max::-webkit-inner-spin-button,
   .number-control .number-max::-webkit-outer-spin-button { margin: 0; appearance: none; }
 }
+
+/* Invocações: mesmo desenho das bênçãos, com PV próprios por criatura. */
+.summons-over { color: var(--health); }
+.summons-section .large-add.summons-other { border-style: dashed; }
+.summons-section .large-add.summons-clear { color: var(--muted); border-color: var(--line); }
+.summon-card { background: var(--paper-bright); border: 1px solid var(--line); border-left: 5px solid var(--deity); border-radius: 6px; }
+.summon-card.is-down { border-left-color: var(--line); }
+.summon-card.is-down .summon-main > :not(.summon-actions) { opacity: .55; }
+.summon-main { display: flex; align-items: center; gap: 10px 16px; padding: 10px 14px; flex-wrap: wrap; }
+.summon-title { flex: 1 1 170px; min-width: 0; display: grid; gap: 2px; }
+.summon-title strong { overflow: hidden; font-family: "Cormorant Garamond", Georgia, serif; font-size: 20px; line-height: 1.05; text-overflow: ellipsis; white-space: nowrap; }
+.summon-title small { color: var(--muted); font-size: var(--text-small); }
+.summon-card.is-down .summon-title small { color: var(--health); font-weight: 750; }
+.summon-hp { position: relative; display: grid; grid-template-columns: 30px 46px auto 30px; align-items: center; gap: 4px; padding-bottom: 7px; }
+.summon-hp button { width: 30px; height: 30px; padding: 0; color: var(--health); background: transparent; border: 1px solid color-mix(in srgb, var(--health) 45%, var(--line)); border-radius: 50%; font-size: 16px; font-weight: 800; line-height: 1; cursor: pointer; }
+.summon-hp button:hover { color: #fff; background: var(--health); }
+.summon-hp input { width: 46px; height: 30px; padding: 0 4px; color: var(--ink); text-align: right; background: transparent; border: 0; border-bottom: 1px solid var(--line); font-family: "Cormorant Garamond", Georgia, serif; font-size: 22px; font-weight: 700; font-variant-numeric: lining-nums tabular-nums; appearance: textfield; -moz-appearance: textfield; }
+.summon-hp input::-webkit-inner-spin-button, .summon-hp input::-webkit-outer-spin-button { margin: 0; appearance: none; }
+.summon-hp-max { color: var(--muted); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.summon-bar { position: absolute; left: 34px; right: 34px; bottom: 0; height: 3px; overflow: hidden; background: color-mix(in srgb, var(--line) 55%, transparent); border-radius: 2px; }
+.summon-bar i { display: block; height: 100%; background: var(--health); border-radius: 2px; transition: width .2s ease-out; }
+.summon-stats { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.summon-stats > div { display: flex; align-items: baseline; gap: 5px; padding: 3px 9px; background: color-mix(in srgb, var(--deity-light) 22%, transparent); border-radius: 6px; }
+.summon-stats dt { color: var(--muted); font-size: var(--text-label); font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+.summon-stats dd { margin: 0; color: var(--ink); font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.summon-actions { display: flex; gap: 6px; margin-left: auto; }
+.summon-dismiss:hover { color: var(--health); border-color: var(--health); }
+.summon-notes { margin: 0; padding: 0 14px 12px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.summon-editor label:has(textarea) textarea { min-height: 64px; }
+@media (max-width: 800px) {
+  .summon-main { gap: 8px 12px; }
+  .summon-title { flex-basis: calc(100% - 150px); }
+  .summon-stats { flex-basis: 100%; }
+  .summon-actions { margin-left: 0; }
+}
+@media print {
+  .summons-section .effects-list { display: none; }
+}
