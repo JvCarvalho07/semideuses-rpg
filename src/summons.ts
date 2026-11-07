@@ -19,6 +19,8 @@ export type Summon = {
   damageType: string;
   save: number;
   notes: string;
+  /** Nome da arte do medalhão (public/assets/summon-<art>.webp). */
+  art: string;
 };
 
 export type SummonPreset = {
@@ -27,6 +29,10 @@ export type SummonPreset = {
   /** Nome da habilidade, para fichas antigas sem sourceId. */
   ability: string;
   creature: string;
+  /** Arte do medalhão. */
+  art: string;
+  /** "morto-vivo", "autômato"… mostrado embaixo do nome. */
+  kind: string;
   count?: number;
   damageType: string;
   notes?: string;
@@ -51,20 +57,27 @@ export function baseSummonStats(level: number, castingModifier: number, proficie
 }
 
 export const SUMMON_PRESETS: SummonPreset[] = [
-  { sourceId: "hades-erguer-morto", ability: "Erguer Morto", creature: "Servo morto-vivo", damageType: "Necrótico", notes: "Até o fim do combate. Gaste 1 Alma para erguer dois de uma vez." },
-  { sourceId: "hades-morte-comando-funebre", ability: "Comando Fúnebre", creature: "Esqueleto", damageType: "Necrótico", notes: "Age na própria Iniciativa. Máximo de 2 erguidos por esta habilidade. 1 Alma: +1d6 nos ataques até o seu próximo turno." },
-  { sourceId: "hefesto-automato-automato-de-bronze", ability: "Autômato de Bronze", creature: "Autômato de Bronze", damageType: "Concussivo" },
-  { sourceId: "hefesto-torreta", ability: "Torreta", creature: "Torreta", damageType: "Perfurante", notes: "Imóvel. Atira sozinha por 1 minuto, até 18 m.", tweak: () => ({ speed: 0, damage: "2d8" }) },
-  { sourceId: "hecate-necromancia-servo-espectral", ability: "Servo Espectral", creature: "Cão das sombras", damageType: "Necrótico", notes: "Obedece até o fim do combate." },
-  { sourceId: "artemis-irmandade-cacadora-espectral", ability: "Caçadora Espectral", creature: "Caçadora espectral", damageType: "Perfurante" },
-  { sourceId: "artemis-irmandade-matilha", ability: "Matilha", creature: "Caçadora espectral", count: 3, damageType: "Perfurante", notes: "Flanqueiam: aliados têm Vantagem contra quem elas cercam." },
-  { sourceId: "artemis-irmandade-lobas-espectrais", ability: "Lobas Espectrais", creature: "Loba espectral", damageType: "Perfurante", notes: "TR de FOR ou Agarrado; seguem a presa marcada." },
+  { sourceId: "hades-erguer-morto", ability: "Erguer Morto", creature: "Servo morto-vivo", art: "servo", kind: "morto-vivo", damageType: "Necrótico", notes: "Até o fim do combate. Gaste 1 Alma para erguer dois de uma vez." },
+  { sourceId: "hades-morte-comando-funebre", ability: "Comando Fúnebre", creature: "Esqueleto", art: "esqueleto", kind: "morto-vivo", damageType: "Necrótico", notes: "Age na própria Iniciativa. Máximo de 2 erguidos por esta habilidade. 1 Alma: +1d6 nos ataques até o seu próximo turno." },
+  { sourceId: "hefesto-automato-automato-de-bronze", ability: "Autômato de Bronze", creature: "Autômato de Bronze", art: "automato", kind: "autômato", damageType: "Concussivo" },
+  { sourceId: "hefesto-torreta", ability: "Torreta", creature: "Torreta", art: "torreta", kind: "dispositivo", damageType: "Perfurante", notes: "Imóvel. Atira sozinha por 1 minuto, até 18 m.", tweak: () => ({ speed: 0, damage: "2d8" }) },
+  { sourceId: "hecate-necromancia-servo-espectral", ability: "Servo Espectral", creature: "Cão das sombras", art: "cao", kind: "espírito", damageType: "Necrótico", notes: "Obedece até o fim do combate." },
+  { sourceId: "artemis-irmandade-cacadora-espectral", ability: "Caçadora Espectral", creature: "Caçadora espectral", art: "cacadora", kind: "espírito", damageType: "Perfurante" },
+  { sourceId: "artemis-irmandade-matilha", ability: "Matilha", creature: "Caçadora espectral", art: "cacadora", kind: "espírito", count: 3, damageType: "Perfurante", notes: "Flanqueiam: aliados têm Vantagem contra quem elas cercam." },
+  { sourceId: "artemis-irmandade-lobas-espectrais", ability: "Lobas Espectrais", creature: "Loba espectral", art: "loba", kind: "espírito", damageType: "Perfurante", notes: "TR de FOR ou Agarrado; seguem a presa marcada." },
   {
-    sourceId: "poseidon-cavalos-corcel-das-ondas", ability: "Corcel das Ondas", creature: "Corcel das Ondas", damageType: "Concussivo",
+    sourceId: "poseidon-cavalos-corcel-das-ondas", ability: "Corcel das Ondas", creature: "Corcel das Ondas", art: "corcel", kind: "montaria", damageType: "Concussivo",
     notes: "Montaria Grande por 10 minutos. Maré Alta: investe e empurra o primeiro inimigo do caminho.",
     tweak: (_base, level) => ({ ca: 14, hpMax: 5 * Math.max(1, Math.floor(level)), speed: 18, damage: "2d8" }),
   },
 ];
+
+export const ART_NAMES = ["servo", "esqueleto", "automato", "torreta", "cao", "cacadora", "loba", "corcel", "criatura"];
+
+/** A habilidade da ficha que corresponde a uma invocação (para mostrar ação e custo). */
+export function presetAbility<T extends AbilityLike>(abilities: ReadonlyArray<T>, preset: SummonPreset): T | undefined {
+  return abilities.find((ability) => sourceOf(ability) === preset.sourceId || fold(ability.name ?? "") === fold(preset.ability));
+}
 
 /** Habilidades que deixam ter mais criaturas ao mesmo tempo. */
 const LIMIT_RAISERS: Record<string, number> = { "hades-morte-horda": 5 };
@@ -117,6 +130,7 @@ export function makeSummons(preset: SummonPreset | null, level: number, castingM
       ...stats,
       damageType: preset?.damageType ?? "",
       notes: preset?.notes ?? "",
+      art: preset?.art ?? "criatura",
     };
   });
 }
@@ -144,6 +158,7 @@ export function normalizeSummons(value: unknown): Summon[] {
         damageType: text(item.damageType),
         save: Math.round(num(item.save, 0)),
         notes: text(item.notes),
+        art: ART_NAMES.includes(text(item.art)) ? text(item.art) : "criatura",
       };
     });
 }

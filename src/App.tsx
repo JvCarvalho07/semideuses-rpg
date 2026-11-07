@@ -697,6 +697,9 @@ export default function Home() {
         <SummonsSection
           summons={sheet.summons}
           presets={availablePresets(Object.values(sheet.abilityGroups).flat(), sheet.level)}
+          abilities={Object.values(sheet.abilityGroups).flat()}
+          ownerName={sheet.name}
+          filiation={sheet.filiation}
           limit={summonLimit(Object.values(sheet.abilityGroups).flat(), sheet.level)}
           level={sheet.level}
           castingModifier={derived.castingModifier}
