@@ -19,6 +19,7 @@ import { Fact } from "./ui/facts";
 import { TAB_SECTION_IDS, TabBar, VitalsDock, useActiveSection, useScrolledPast } from "./ui/navigation";
 import { EffectsSection } from "./ui/effects";
 import { LibraryPanel } from "./ui/library";
+import { PrintHelp, printDevice } from "./ui/printHelp";
 import { type Library, findByName, loadLibrary, newSheetId, readSheet, removeSheet, setActive, sortedEntries, writeSheet } from "./library";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -33,6 +34,7 @@ export default function Home() {
   const [saved, setSaved] = useState(false);
   const [library, setLibrary] = useState<Library>({ activeId: "", entries: [] });
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [printHelpOpen, setPrintHelpOpen] = useState(false);
   const libraryRef = useRef(library);
   libraryRef.current = library;
   // Ao abrir uma ficha da lista, não conta como edição (não muda a data dela).
@@ -360,6 +362,12 @@ export default function Home() {
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.print()));
   }
 
+  // No celular, a tela de impressão do sistema confunde: primeiro um passo a passo, depois o PDF.
+  function requestPdf() {
+    if (printDevice() === "desktop") printSheet();
+    else setPrintHelpOpen(true);
+  }
+
   const typeCounts = Object.fromEntries(EQUIPMENT_TYPES.map((type) => [type, sheet.equipment.filter((item) => item.type === type).length]));
   const activeEquipmentFilter = equipmentFilter === "Todos" || typeCounts[equipmentFilter] ? equipmentFilter : "Todos";
   const filteredEquipment = sheet.equipment.filter((item) => {
@@ -405,10 +413,19 @@ export default function Home() {
               <option value="A5">A5</option>
             </select>
           </label>
-          <button type="button" className="primary-action" onClick={printSheet}>PDF</button>
+          <button type="button" className="primary-action pdf-button" onClick={requestPdf}>PDF</button>
           <input ref={importRef} type="file" accept=".json,application/json" hidden onChange={importJson} />
         </div>
       </header>
+      <PrintHelp
+        open={printHelpOpen}
+        device={printHelpOpen ? printDevice() : "desktop"}
+        format={printFormat}
+        onFormat={setPrintFormat}
+        onPrint={() => { setPrintHelpOpen(false); printSheet(); }}
+        onExport={exportJson}
+        onClose={() => setPrintHelpOpen(false)}
+      />
       <LibraryPanel
         open={libraryOpen}
         entries={sortedEntries(library)}

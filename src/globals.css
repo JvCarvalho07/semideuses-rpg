@@ -2805,3 +2805,44 @@ section[id], #combate { scroll-margin-top: 72px; }
 .talent-picker-foot button:hover { background: var(--paper-deep); }
 .talent-picker-foot small { color: var(--muted); font-size: var(--text-small); }
 @media print { .talent-picker { display: none !important; } .ability-print .talent-effects { font-size: 8pt; gap: 1mm; } }
+
+/* PDF no celular: passo a passo antes da tela de impressão do sistema. */
+.print-help {
+  width: min(440px, calc(100% - 24px));
+  max-height: min(640px, calc(100dvh - 32px));
+  padding: 0;
+  color: var(--ink);
+  background: var(--paper-bright);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--bronze);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(7, 26, 33, .45);
+}
+.print-help::backdrop { background: rgba(7, 26, 33, .62); }
+.print-help-inner { display: grid; gap: 16px; padding: 20px 20px 18px; }
+.print-help h2 { margin: 0; font-family: "Cormorant Garamond", Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.05; }
+.print-help-lead { margin: 0; color: var(--ink); font-size: 14px; line-height: 1.5; }
+.print-help-formats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; border: 0; }
+.print-help-formats legend { margin-bottom: 8px; padding: 0; color: var(--muted); font-size: var(--text-label); font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+.print-help-formats label { position: relative; min-height: 64px; display: grid; align-content: center; justify-items: center; gap: 2px; padding: 8px 6px; text-align: center; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.print-help-formats label.is-on { background: color-mix(in srgb, var(--deity-light) 22%, var(--paper-bright)); border-color: var(--deity); box-shadow: inset 0 0 0 1px var(--deity); }
+.print-help-formats input { position: absolute; opacity: 0; pointer-events: none; }
+.print-help-formats label:has(input:focus-visible) { outline: 2px solid var(--aegean); outline-offset: 2px; }
+.print-help-formats b { font-family: "Cormorant Garamond", Georgia, serif; font-size: 22px; line-height: 1; }
+.print-help-formats small { color: var(--muted); font-size: 11.5px; line-height: 1.25; }
+.print-help-steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.print-help-steps li { display: grid; grid-template-columns: 28px 1fr; align-items: start; gap: 10px; font-size: 14px; line-height: 1.45; counter-increment: step; }
+.print-help-steps li::before { content: counter(step); width: 28px; height: 28px; display: grid; place-items: center; color: #fff; background: var(--deity); border-radius: 50%; font-size: 13px; font-weight: 800; }
+.print-help-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.print-help-actions button, .print-help-actions a { flex: 1 1 140px; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; font-weight: 750; text-decoration: none; cursor: pointer; }
+.print-help-actions .print-help-primary { color: #17120b; background: #d3aa64; border-color: #c8995a; }
+.print-help-actions button:focus-visible, .print-help-actions a:focus-visible { outline: 2px solid var(--aegean); outline-offset: 2px; }
+@media (max-width: 580px) {
+  .print-help { width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 12px 12px 0 0; border-bottom: 0; }
+  .print-help-inner { padding: 20px 16px calc(18px + env(safe-area-inset-bottom)); }
+  /* No celular o tamanho da folha é escolhido no passo a passo; o botão PDF ganha espaço para o dedo. */
+  .app-nav .pdf-format-control { display: none; }
+  .document-actions button { min-height: 40px; }
+  .document-actions .pdf-button { min-width: 52px; padding-inline: 10px; font-size: 12px; }
+}
+@media print { .print-help { display: none !important; } }
