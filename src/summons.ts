@@ -19,7 +19,7 @@ export type Summon = {
   damageType: string;
   save: number;
   notes: string;
-  /** Nome da arte do medalhão (public/assets/summon-<art>.webp). */
+  /** Nome da arte da carta (public/assets/summons/card-<art>-480.webp e -800.webp). */
   art: string;
 };
 
@@ -29,7 +29,7 @@ export type SummonPreset = {
   /** Nome da habilidade, para fichas antigas sem sourceId. */
   ability: string;
   creature: string;
-  /** Arte do medalhão. */
+  /** Arte da carta. */
   art: string;
   /** "morto-vivo", "autômato"… mostrado embaixo do nome. */
   kind: string;
