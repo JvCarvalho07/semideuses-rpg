@@ -1,9 +1,10 @@
 import { useState } from "react";
 import type { Ability } from "../model";
 import { signed } from "../rules";
-import { makeSummons, presetAbility, type Summon, type SummonPreset } from "../summons";
+import { BESTIARY, makeSummons, presetAbility, type Summon, type SummonPreset } from "../summons";
 
 const ART_BASE = `${import.meta.env.BASE_URL}assets/`;
+
 /** Arte pintada de cada tipo de criatura (gerada para o site, retrato 2:3). */
 const cardSrc = (art: string, size: 480 | 800) => `${ART_BASE}summons/card-${art || "criatura"}-${size}.webp`;
 
@@ -21,6 +22,12 @@ function Art({ art, sizes, className }: { art: string; sizes: string; className?
   );
 }
 
+const ATTRIBUTES = ["FOR", "DES", "CON", "INT", "SAB", "CAR"];
+const modifier = (value: number) => {
+  const mod = Math.floor((value - 10) / 2);
+  return mod < 0 ? `–${Math.abs(mod)}` : `+${mod}`;
+};
+
 const NUMBER_FIELDS: Array<{ key: "hpMax" | "ca" | "speed" | "attackBonus" | "save"; label: string }> = [
   { key: "hpMax", label: "PV máx." },
   { key: "ca", label: "CA" },
@@ -31,7 +38,6 @@ const NUMBER_FIELDS: Array<{ key: "hpMax" | "ca" | "speed" | "attackBonus" | "sa
 
 const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" } as const;
 const Icon = {
-  swords: <svg viewBox="0 0 24 24" aria-hidden="true" {...stroke}><path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2" /><path d="M9.5 17.5 21 6V3h-3L6.5 14.5M11 19l-6-6M8 16l-4 4M5 21l-2-2" /></svg>,
   edit: <svg viewBox="0 0 24 24" aria-hidden="true" {...stroke}><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>,
   hourglass: <svg viewBox="0 0 24 24" aria-hidden="true" {...stroke}><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9" /></svg>,
   trash: <svg viewBox="0 0 24 24" aria-hidden="true" {...stroke}><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13" /></svg>,
@@ -46,51 +52,73 @@ function SummonCard({ summon, kind, startOpen, onUpdate, onRemove }: { summon: S
   const down = summon.hp <= 0;
   const ratio = Math.max(0, Math.min(1, summon.hp / Math.max(1, summon.hpMax)));
   const hurt = !down && ratio <= 0.5;
+  const entry = BESTIARY[summon.art];
+  const type = entry?.type ?? (kind ? kind[0].toUpperCase() + kind.slice(1) : "Criatura");
+  const attributes = entry?.attributes.map((value, index) => ({ label: ATTRIBUTES[index], value })).filter((item) => item.value !== null) ?? [];
+  const damage = [summon.damage, summon.damageType].filter(Boolean).join(" ");
+
   return (
     <article className={`summon-card ${down ? "is-down" : ""} ${hurt ? "is-hurt" : ""}`}>
-      <div className="summon-face">
-        <Art art={summon.art} className="summon-art" sizes="(max-width: 700px) 92vw, 340px" />
+      <div className="summon-art-frame">
+        <Art art={summon.art} className="summon-art" sizes="(max-width: 700px) 92vw, 380px" />
         <button type="button" className="summon-edit" aria-expanded={open} aria-label={open ? "Fechar edição" : `Editar ${summon.name}`} onClick={() => setOpen(!open)}>{Icon.edit}</button>
         {down && <span className="summon-fallen">Caiu</span>}
-        <div className="summon-panel">
-          <header className="summon-plate">
-            <h3>{summon.name || "Criatura"}</h3>
-            <span>{[summon.source || "Invocação", kind].filter(Boolean).join(" · ")}</span>
-          </header>
-          <div className="summon-life">
-            <label className="summon-hp-value">
+      </div>
+
+      <div className="summon-block">
+        <header className="summon-head">
+          <h3>{summon.name || "Criatura"}</h3>
+          <p>{type} · {summon.source || "invocação"}</p>
+        </header>
+
+        <div className="summon-vitals">
+          <div className="summon-hp">
+            <span className="summon-key">PV</span>
+            <label>
               <span className="sr-only">PV atuais de {summon.name}</span>
               <input type="number" min={0} max={summon.hpMax} value={summon.hp} onChange={(event) => setHp(Number(event.target.value))} />
-              <small>/ {summon.hpMax} PV</small>
             </label>
+            <span className="summon-hp-max">/ {summon.hpMax}</span>
             <div className="summon-steps">
               <button type="button" onClick={() => setHp(summon.hp - 1)} aria-label={`Tirar 1 PV de ${summon.name}`}>−</button>
               <button type="button" onClick={() => setHp(summon.hp + 1)} aria-label={`Somar 1 PV a ${summon.name}`}>+</button>
             </div>
           </div>
           <div className="summon-bar" role="meter" aria-label="PV" aria-valuemin={0} aria-valuemax={summon.hpMax} aria-valuenow={summon.hp}><i style={{ width: `${ratio * 100}%` }} /></div>
-          <dl className="summon-stats">
-            <div><dt>CA</dt><dd>{summon.ca}</dd></div>
-            <div><dt>{summon.speed ? "Desloc." : "Imóvel"}</dt><dd>{summon.speed ? `${summon.speed} m` : "—"}</dd></div>
-            <div><dt>Resist.</dt><dd>{signed(summon.save)}</dd></div>
-          </dl>
-          <p className="summon-attack">
-            {Icon.swords}
-            <span><b>{signed(summon.attackBonus)}</b> para acertar{summon.damage && <> · <b>{summon.damage}</b></>}{summon.damageType && <em> {summon.damageType}</em>}</span>
-          </p>
+          <p className="summon-line"><b>CA</b> {summon.ca}<span aria-hidden="true">|</span><b>Velocidade</b> {summon.speed ? `${summon.speed} m` : "imóvel"}<span aria-hidden="true">|</span><b>TR</b> {signed(summon.save)}</p>
         </div>
+
+        {attributes.length > 0 && (
+          <table className="summon-attributes">
+            <thead><tr>{attributes.map((item) => <th key={item.label} scope="col">{item.label}</th>)}</tr></thead>
+            <tbody><tr>{attributes.map((item) => <td key={item.label}>{item.value} ({modifier(item.value as number)})</td>)}</tr></tbody>
+          </table>
+        )}
+        {entry?.defenses && <p className="summon-defenses">{entry.defenses}</p>}
+
+        {(entry?.traits.length || summon.notes) ? (
+          <section className="summon-part">
+            <h4>Traços</h4>
+            {entry?.traits.map((trait) => <p key={trait.name}><b>{trait.name}.</b> {trait.text}</p>)}
+            {summon.notes && <p><b>Invocação.</b> {summon.notes}</p>}
+          </section>
+        ) : null}
+
+        <section className="summon-part">
+          <h4>Ações</h4>
+          <p><b>Golpe.</b> Ataque {signed(summon.attackBonus)}.{damage && <> Acerto: {damage}.</>}</p>
+        </section>
+
+        {entry && <p className="summon-source">Base: {entry.base}, Livro do Mestre. Números de combate pela regra de invocação.</p>}
+
+        {down && (
+          <div className="summon-down-actions">
+            <button type="button" onClick={onRemove}>{Icon.trash}Dispensar</button>
+            <button type="button" className="is-primary" title="Volta com PV cheio. Conta como uma nova invocação: pague o custo da habilidade." onClick={() => setHp(summon.hpMax)}>{Icon.rise}Reerguer</button>
+          </div>
+        )}
       </div>
-      {(summon.notes || down) && (
-        <div className="summon-foot">
-          {summon.notes && <p className="summon-note">{summon.notes}</p>}
-          {down && (
-            <div className="summon-down-actions">
-              <button type="button" onClick={onRemove}>{Icon.trash}Dispensar</button>
-              <button type="button" className="is-primary" title="Volta com PV cheio. Conta como uma nova invocação: pague o custo da habilidade." onClick={() => setHp(summon.hpMax)}>{Icon.rise}Reerguer</button>
-            </div>
-          )}
-        </div>
-      )}
+
       {open && (
         <div className="effect-editor summon-editor">
           <label className="span-2">Nome<input value={summon.name} onChange={(event) => update("name", event.target.value)} /></label>

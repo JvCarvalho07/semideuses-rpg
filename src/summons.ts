@@ -162,3 +162,63 @@ export function normalizeSummons(value: unknown): Summon[] {
       };
     });
 }
+
+export type BestiaryTrait = { name: string; text: string };
+export type BestiaryEntry = {
+  /** Criatura do Livro do Mestre que serve de base. */
+  base: string;
+  type: string;
+  /** FOR, DES, CON, INT, SAB, CAR; null = o livro não traz. */
+  attributes: [number | null, number | null, number | null, number | null, number | null, number | null];
+  defenses: string;
+  traits: BestiaryTrait[];
+};
+
+/** Atributos, defesas e traços do Livro do Mestre (Bestiário). Os números de combate seguem a regra de invocação do Livro do Jogador. */
+export const BESTIARY: Record<string, BestiaryEntry> = {
+  esqueleto: {
+    base: "Esqueleto Guerreiro do Érebo", type: "Morto-vivo",
+    attributes: [14, 13, 14, 6, 8, 5],
+    defenses: "Imune a Veneno e Psíquico; Enfeitiçado, Apavorado e Envenenado. Vulnerável a dano Divino.",
+    traits: [
+      { name: "Formação Cerrada", text: "+1 na CA enquanto estiver adjacente a outro esqueleto." },
+      { name: "Instinto de Combate", text: "Ataca o alvo mais próximo que o atacou; obedece ordens simples de quem o ergueu." },
+    ],
+  },
+  servo: {
+    base: "Zumbi Antigo", type: "Morto-vivo",
+    attributes: [18, 6, 20, 3, 6, 5],
+    defenses: "Imune a Veneno; Exausto e Envenenado. Visão no Escuro 18 m.",
+    traits: [{ name: "Implacável", text: "Nunca recua, nunca hesita, nunca para por ferimentos." }],
+  },
+  cao: {
+    base: "Sombra Faminta", type: "Morto-vivo",
+    attributes: [6, 14, 10, 8, 10, 8],
+    defenses: "Imune a Frio e Necrótico; Agarrado, Caído e Paralisado. Visão no Escuro 18 m.",
+    traits: [
+      { name: "Senso de Vida", text: "Percebe sozinho criaturas vivas a até 18 m." },
+      { name: "Vulnerabilidade à Luz", text: "Em Luz Plena, tem Desvantagem em ataques e testes." },
+    ],
+  },
+  corcel: {
+    base: "Hipocampo Selvagem", type: "Criatura",
+    attributes: [18, 14, 14, 6, 12, 10],
+    defenses: "Visão no Escuro 18 m.",
+    traits: [
+      { name: "Anfíbio", text: "Respira ar e água." },
+      { name: "Reconhecimento Divino", text: "Filhos de Poseidon montam sem teste." },
+    ],
+  },
+  loba: {
+    base: "Lobo de Licaon", type: "Fera espectral",
+    attributes: [16, null, null, null, null, null],
+    defenses: "",
+    traits: [{ name: "Faro Apurado", text: "Vantagem em Percepção pelo olfato." }],
+  },
+  automato: {
+    base: "Mirmidão", type: "Constructo",
+    attributes: [13, 12, 12, null, null, null],
+    defenses: "Carapaça: resistência a Concussivo; imune a Veneno e Enfeitiçado.",
+    traits: [],
+  },
+};
