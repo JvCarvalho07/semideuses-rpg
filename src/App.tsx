@@ -21,6 +21,8 @@ import { EffectsSection } from "./ui/effects";
 import { SummonsSection } from "./ui/summons";
 import { availablePresets, summonLimit } from "./summons";
 import { LibraryPanel } from "./ui/library";
+import { JournalBook } from "./ui/journal";
+import { PrintHelp, printDevice } from "./ui/printHelp";
 import { type Library, findByName, loadLibrary, newSheetId, readSheet, removeSheet, setActive, sortedEntries, writeSheet } from "./library";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -35,6 +37,8 @@ export default function Home() {
   const [saved, setSaved] = useState(false);
   const [library, setLibrary] = useState<Library>({ activeId: "", entries: [] });
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [journalOpen, setJournalOpen] = useState(false);
+  const [printHelpOpen, setPrintHelpOpen] = useState(false);
   const libraryRef = useRef(library);
   libraryRef.current = library;
   // Ao abrir uma ficha da lista, não conta como edição (não muda a data dela).
@@ -208,7 +212,12 @@ export default function Home() {
 
   function updateVitalMaximum(resource: "hp" | "mana", overrideKey: "hpMaxOverride" | "manaMaxOverride", value: number) {
     const nextMaximum = Math.max(0, Number.isFinite(value) ? value : 0);
-    setSheet((current) => ({ ...current, [overrideKey]: nextMaximum, [resource]: Math.min(Math.max(0, current[resource]), nextMaximum) }));
+    setSheet((current) => {
+      // O número digitado é o máximo final: guarda sem os bônus de bênçãos e talentos, que a ficha soma por cima.
+      const stats = deriveStats(current);
+      const extras = resource === "hp" ? stats.effects.hpMax + stats.talents.hpBonus : stats.talents.manaBonus;
+      return { ...current, [overrideKey]: nextMaximum - extras, [resource]: Math.min(Math.max(0, current[resource]), nextMaximum) };
+    });
   }
 
   function resetVitalMaximum(resource: "hp" | "mana", overrideKey: "hpMaxOverride" | "manaMaxOverride") {
@@ -357,6 +366,12 @@ export default function Home() {
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.print()));
   }
 
+  // No celular, a tela de impressão do sistema confunde: primeiro um passo a passo, depois o PDF.
+  function requestPdf() {
+    if (printDevice() === "desktop") printSheet();
+    else setPrintHelpOpen(true);
+  }
+
   const typeCounts = Object.fromEntries(EQUIPMENT_TYPES.map((type) => [type, sheet.equipment.filter((item) => item.type === type).length]));
   const activeEquipmentFilter = equipmentFilter === "Todos" || typeCounts[equipmentFilter] ? equipmentFilter : "Todos";
   const filteredEquipment = sheet.equipment.filter((item) => {
@@ -391,6 +406,10 @@ export default function Home() {
         <nav><a href="#combate">Combate</a><a href="#habilidades">Habilidades</a><a href="#equipamentos">Equipamentos</a><a href="#historia">História</a></nav>
         <div className="document-actions">
           <span className={saved ? "save-visible" : ""}>Salvo</span>
+          <button type="button" className="journal-button" onClick={() => setJournalOpen(true)} aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" /><path d="M4 19V5" /></svg>
+            Diário
+          </button>
           <button type="button" className="library-button" onClick={() => setLibraryOpen(true)} aria-haspopup="dialog">Fichas{library.entries.length > 1 && <b>{library.entries.length}</b>}</button>
           <button type="button" onClick={() => importRef.current?.click()}>Importar</button>
           <button type="button" onClick={exportJson}>JSON</button>
@@ -402,10 +421,26 @@ export default function Home() {
               <option value="A5">A5</option>
             </select>
           </label>
-          <button type="button" className="primary-action" onClick={printSheet}>PDF</button>
+          <button type="button" className="primary-action pdf-button" onClick={requestPdf}>PDF</button>
           <input ref={importRef} type="file" accept=".json,application/json" hidden onChange={importJson} />
         </div>
       </header>
+      <JournalBook
+        open={journalOpen}
+        ownerName={sheet.name}
+        entries={sheet.journal}
+        onClose={() => setJournalOpen(false)}
+        onChange={(journal) => setSheet((current) => ({ ...current, journal }))}
+      />
+      <PrintHelp
+        open={printHelpOpen}
+        device={printHelpOpen ? printDevice() : "desktop"}
+        format={printFormat}
+        onFormat={setPrintFormat}
+        onPrint={() => { setPrintHelpOpen(false); printSheet(); }}
+        onExport={exportJson}
+        onClose={() => setPrintHelpOpen(false)}
+      />
       <LibraryPanel
         open={libraryOpen}
         entries={sortedEntries(library)}
@@ -479,14 +514,14 @@ export default function Home() {
           <div className="combat-dashboard" id="combate" style={{ "--resource-texture": `url(${RESOURCE_ASSETS.texture})` } as CSSProperties}>
             <section className="vitals-block">
               <div className="vital-row">
-                <NumberControl label="PV" value={sheet.hp} max={hpMax} iconSrc={RESOURCE_ASSETS.health} onChange={(value) => patch("hp", Math.min(Math.max(0, value), Math.max(0, hpMax)))} onIncrease={() => adjustHp(1)} onDecrease={() => adjustHp(-1)} onMaxChange={(value) => updateVitalMaximum("hp", "hpMaxOverride", value)} autoMax={derived.hpMax.overridden ? derived.hpMax.auto : null} onResetMax={() => resetVitalMaximum("hp", "hpMaxOverride")} />
+                <NumberControl label="PV" value={sheet.hp} max={hpMax} iconSrc={RESOURCE_ASSETS.health} onChange={(value) => patch("hp", Math.min(Math.max(0, value), Math.max(0, hpMax)))} onIncrease={() => adjustHp(1)} onDecrease={() => adjustHp(-1)} onMaxChange={(value) => updateVitalMaximum("hp", "hpMaxOverride", value)} autoMax={derived.hpMax.overridden && derived.hpMax.auto !== null ? derived.hpMax.auto + derived.effects.hpMax + derived.talents.hpBonus : null} onResetMax={() => resetVitalMaximum("hp", "hpMaxOverride")} />
                 <label className="maximum-field">Máximo<input type="number" min={1} value={hpMax} onChange={(event) => updateVitalMaximum("hp", "hpMaxOverride", Number(event.target.value))} /></label>
                 <ResourceBar label="PV" value={sheet.hp} max={hpMax} temp={sheet.hpTemp} color="var(--health)" kind="health" onChange={(value) => patch("hp", value)} />
                 <label className="temp-value">Temporário<input type="number" min={0} value={sheet.hpTemp} onChange={(event) => patch("hpTemp", Number(event.target.value))} /></label>
               </div>
               {derived.usesMana || manaMax > 0 ? (
               <div className="vital-row mana-row">
-                <NumberControl label="MP" value={sheet.mana} max={manaMax} iconSrc={RESOURCE_ASSETS.mana} onChange={(value) => patch("mana", Math.min(Math.max(0, value), Math.max(0, manaMax)))} onIncrease={() => adjustMana(1)} onDecrease={() => adjustMana(-1)} onMaxChange={(value) => updateVitalMaximum("mana", "manaMaxOverride", value)} autoMax={derived.manaMax.overridden ? derived.manaMax.auto : null} onResetMax={() => resetVitalMaximum("mana", "manaMaxOverride")} />
+                <NumberControl label="MP" value={sheet.mana} max={manaMax} iconSrc={RESOURCE_ASSETS.mana} onChange={(value) => patch("mana", Math.min(Math.max(0, value), Math.max(0, manaMax)))} onIncrease={() => adjustMana(1)} onDecrease={() => adjustMana(-1)} onMaxChange={(value) => updateVitalMaximum("mana", "manaMaxOverride", value)} autoMax={derived.manaMax.overridden ? derived.manaMax.auto + derived.talents.manaBonus : null} onResetMax={() => resetVitalMaximum("mana", "manaMaxOverride")} />
                 <label className="maximum-field">Máximo<input type="number" min={1} value={manaMax} onChange={(event) => updateVitalMaximum("mana", "manaMaxOverride", Number(event.target.value))} /></label>
                 <ResourceBar label="MP" value={sheet.mana} max={manaMax} color="var(--mana)" kind="mana" onChange={(value) => patch("mana", value)} />
               </div>
@@ -535,7 +570,7 @@ export default function Home() {
                 display={signed(initiative)}
                 value={initiative}
                 overridden={sheet.initiativeOverride !== null}
-                hint={<>DES {signed(mods.des)} · Reflexos {signed(INITIATIVE_BASE_BONUS)} · extra {signed(sheet.initiativeExtra)}{derived.effects.initiative !== 0 && <> · efeitos {signed(derived.effects.initiative)}</>}</>}
+                hint={<>DES {signed(mods.des)} · Reflexos {signed(INITIATIVE_BASE_BONUS)} · extra {signed(sheet.initiativeExtra)}{derived.effects.initiative !== 0 && <> · efeitos {signed(derived.effects.initiative)}</>}{derived.talents.initiativeAdvantage && <> · Vantagem por talento</>}</>}
                 extra={<label className="fact-extra"><small>Bônus extra</small><input type="number" value={sheet.initiativeExtra} aria-label="Bônus extra de iniciativa" onFocus={(event) => event.currentTarget.select()} onChange={(event) => patch("initiativeExtra", Number(event.target.value))} /></label>}
                 onOverride={(value) => patch("initiativeOverride", value)}
                 onReset={() => patch("initiativeOverride", null)}
@@ -637,7 +672,7 @@ export default function Home() {
               <button type="button" className="ability-expand-toggle" onClick={() => setAbilityExpandAll(abilityExpandAll === true ? false : true)}>{abilityExpandAll === true ? "Recolher tudo" : "Expandir tudo"}</button>
             </div>
           </div>
-          <AbilityLayout sheet={sheet} resource={derived.resource} compact={compactViewport} search={abilitySearch} actionFilter={abilityActionFilter} categoryFilter={abilityCategoryFilter} expandAll={abilityExpandAll} onChange={(updater) => setSheet(updater)} />
+          <AbilityLayout sheet={sheet} resource={derived.resource} compact={compactViewport} search={abilitySearch} actionFilter={abilityActionFilter} categoryFilter={abilityCategoryFilter} expandAll={abilityExpandAll} skillRanks={Object.fromEntries(derived.skills.map((skill) => [skill.name, skill.rank]))} onChange={(updater) => setSheet(updater)} />
         </section>
 
         <section className="equipment-section reveal-section" id="equipamentos">

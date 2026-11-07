@@ -1,6 +1,7 @@
 // Regras do Livro do Jogador (3ª edição) em funções puras.
-// Este arquivo só pode usar `import type` — assim o Node consegue rodar os testes direto.
+// Imports de runtime só de arquivos sem dependências e com a extensão .ts — assim o Node roda os testes direto.
 import type { AttributeKey } from "./model";
+import { isLinkedTalent, officialTalentFor, talentChoice, type TalentLike } from "./officialTalents.ts";
 
 export const ATTRIBUTE_KEYS: AttributeKey[] = ["for", "des", "con", "int", "sab", "car"];
 
@@ -367,7 +368,50 @@ export type RuleSheet = {
   perceptionOverride: number | null;
   equipment: RuleEquipment[];
   effects: RuleEffect[];
+  /** Talentos da ficha: os do livro aplicam o efeito automático (Cap. 10). */
+  abilityGroups?: { talents?: ReadonlyArray<TalentLike> };
 };
+
+export type TalentEffects = {
+  /** Perícias com Especialização vinda de talento. */
+  expertise: string[];
+  hpPerLevel: number;
+  manaPerLevel: number;
+  /** CA base sem armadura (Armadura Natural). */
+  unarmoredBase: number | null;
+  /** Categorias de armadura com +1 de CA (Especialista em Armadura). */
+  armorBonus: string[];
+  initiativeAdvantage: boolean;
+};
+
+/** Junta o que os talentos do livro mudam sozinhos na ficha. */
+export function talentEffects(talents: ReadonlyArray<TalentLike> = []): TalentEffects {
+  const result: TalentEffects = { expertise: [], hpPerLevel: 0, manaPerLevel: 0, unarmoredBase: null, armorBonus: [], initiativeAdvantage: false };
+  const seen = new Set<string>();
+  for (const entry of talents) {
+    // Só talentos ligados ao livro; os que já estavam na ficha não mudam números sozinhos.
+    if (!isLinkedTalent(entry)) continue;
+    const talent = officialTalentFor(entry);
+    if (!talent?.auto) continue;
+    const choice = talentChoice(entry);
+    // Talento que não se repete conta uma vez só, mesmo se aparecer duplicado na ficha.
+    const key = talent.repeatable ? `${talent.id}:${choice}` : talent.id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const auto = talent.auto;
+    if (auto.expertise) result.expertise.push(auto.expertise);
+    if (auto.expertiseFromChoice) {
+      const skill = canonicalSkill(choice);
+      if (skill) result.expertise.push(skill);
+    }
+    if (auto.hpPerLevel) result.hpPerLevel += auto.hpPerLevel;
+    if (auto.manaPerLevel) result.manaPerLevel += auto.manaPerLevel;
+    if (auto.unarmoredBase) result.unarmoredBase = Math.max(result.unarmoredBase ?? 0, auto.unarmoredBase);
+    if (auto.armorCategoryBonus && ARMOR_CATEGORIES.includes(choice as ArmorCategory)) result.armorBonus.push(choice);
+    if (auto.initiativeAdvantage) result.initiativeAdvantage = true;
+  }
+  return result;
+}
 
 export function modifier(score: number) {
   return Math.floor((score - 10) / 2);
@@ -402,18 +446,26 @@ export function autoMaxMana(level: number, castingMod: number, mode: "full" | "r
   return Math.max(0, first + castingMod) + (Math.max(1, level) - 1) * Math.max(0, step + castingMod);
 }
 
-export type ArmorClassContext = Pick<RuleSheet, "equipment" | "caExtra"> & { naturalArmor?: number };
+export type ArmorClassContext = Pick<RuleSheet, "equipment" | "caExtra"> & {
+  naturalArmor?: number;
+  /** Armadura Natural: base sem armadura (12 em vez de 10); com armadura leve vale a maior. */
+  unarmoredBase?: number | null;
+  /** Especialista em Armadura: +1 de CA nessas categorias (Média também sobe o limite de DES para +3). */
+  armorBonus?: readonly string[];
+};
 
 /** CA com as categorias do Cap. 8. Armadura sem categoria mantém o comportamento antigo (valor final). */
 export function armorClassFor(sheet: ArmorClassContext, desMod: number) {
   // Armadura equipada com valor 0 é um cadastro incompleto: não derruba a CA para 0.
   const armors = sheet.equipment.filter((item) => item.equipped && item.type === "Armadura" && item.armorClass > 0);
+  const bonusFor = (category?: string) => (category && sheet.armorBonus?.includes(category) ? 1 : 0);
+  const unarmored = (sheet.unarmoredBase ?? 10) + desMod + (sheet.naturalArmor ?? 0);
   const values = armors.map((item) => {
-    if (item.armorCategory === "Leve") return item.armorClass + desMod;
-    if (item.armorCategory === "Média") return item.armorClass + Math.min(2, desMod);
-    return item.armorClass;
+    if (item.armorCategory === "Leve") return Math.max(item.armorClass + desMod, sheet.unarmoredBase ? unarmored : 0) + bonusFor("Leve");
+    if (item.armorCategory === "Média") return item.armorClass + Math.min(sheet.armorBonus?.includes("Média") ? 3 : 2, desMod) + bonusFor("Média");
+    return item.armorClass + bonusFor(item.armorCategory);
   });
-  const base = values.length ? Math.max(...values) : 10 + desMod + (sheet.naturalArmor ?? 0);
+  const base = values.length ? Math.max(...values) : unarmored;
   const bonus = sheet.equipment.filter((item) => item.equipped && item.type !== "Armadura").reduce((sum, item) => sum + item.armorClass, 0);
   return base + bonus + sheet.caExtra;
 }
@@ -442,6 +494,8 @@ export type Derived = {
   domSkillOptions: readonly string[];
   /** Soma dos bônus das bênçãos e maldições ativas (já incluídos em CA, iniciativa, deslocamento e PV máximo). */
   effects: { ca: number; initiative: number; speed: number; hpMax: number };
+  /** O que os talentos do livro aplicaram (já incluído nos números acima). */
+  talents: TalentEffects & { hpBonus: number; manaBonus: number };
 };
 
 export function deriveStats(sheet: RuleSheet): Derived {
@@ -455,11 +509,15 @@ export function deriveStats(sheet: RuleSheet): Derived {
     (sum, effect) => ({ ca: sum.ca + effect.ca, initiative: sum.initiative + effect.initiative, speed: sum.speed + effect.speed, hpMax: sum.hpMax + effect.hpMax }),
     { ca: 0, initiative: 0, speed: 0, hpMax: 0 },
   );
+  const talents = talentEffects(sheet.abilityGroups?.talents);
+  const level = Math.max(1, sheet.level);
+  const hpBonus = talents.hpPerLevel * level;
+  const manaBonus = talents.manaPerLevel * level;
   const autoHp = resolved.profile ? maxHpForDie(resolved.profile.hitDie, sheet.level, mods.con) : null;
-  const hpMaxValue = (sheet.hpMaxOverride ?? autoHp ?? 0) + effects.hpMax;
+  const hpMaxValue = (sheet.hpMaxOverride ?? autoHp ?? 0) + effects.hpMax + hpBonus;
   const usesMana = resolved.profile ? resolved.profile.usesMana : true;
   const autoMana = autoMaxMana(sheet.level, castingModifier, !usesMana ? "none" : resolved.diluted ? "reduced" : "full");
-  const manaMaxValue = sheet.manaMaxOverride ?? autoMana;
+  const manaMaxValue = (sheet.manaMaxOverride ?? autoMana) + (usesMana ? manaBonus : 0);
 
   let resource: Derived["resource"] = null;
   if (resolved.resource) {
@@ -472,10 +530,11 @@ export function deriveStats(sheet: RuleSheet): Derived {
     resource = { spec, min: spec.min, max, autoMax, overridden: sheet.resourceMaxOverride !== null, start: Math.max(spec.min, start), clamp: !spec.softMax };
   }
 
-  const autoArmor = armorClassFor({ equipment: sheet.equipment, caExtra: sheet.caExtra, naturalArmor: resolved.naturalArmor }, mods.des) + effects.ca;
+  const autoArmor = armorClassFor({ equipment: sheet.equipment, caExtra: sheet.caExtra, naturalArmor: resolved.naturalArmor, unarmoredBase: talents.unarmoredBase, armorBonus: talents.armorBonus }, mods.des) + effects.ca;
   const autoInitiative = mods.des + INITIATIVE_BASE_BONUS + sheet.initiativeExtra + effects.initiative;
 
   const autoRanks = autoSkillRanks(resolved.skills, sheet.background, sheet.domSkill, resolved.domSkillOptions);
+  for (const skill of talents.expertise) autoRanks[skill] = 2;
   const skills = SKILL_LIST.map(([name, attribute]) => {
     const autoRank = autoRanks[name] ?? 0;
     const override = sheet.skillRankOverrides[name];
@@ -524,6 +583,7 @@ export function deriveStats(sheet: RuleSheet): Derived {
     armorWarnings,
     domSkillOptions: resolved.domSkillOptions,
     effects,
+    talents: { ...talents, hpBonus, manaBonus: usesMana ? manaBonus : 0 },
   };
 }
 

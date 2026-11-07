@@ -16,6 +16,7 @@ import { ensureFiliationSignatures, makeOfficialState, signatureDefinition } fro
 import { migrateSheet, readLegacyValues, SHEET_VERSION } from "./migrate";
 import { syncAbilities } from "./abilitySync";
 import { normalizeSummons } from "./summons";
+import { normalizeJournal } from "./journal";
 import { ARMOR_CATEGORIES, clampResource, deriveStats, type ArmorCategory } from "./rules";
 
 type Dict = Record<string, unknown>;
@@ -147,7 +148,7 @@ export function normalizeImportedSheet(candidate: unknown): { sheet: CharacterSh
   const personalityRaw = dict(raw.personality);
   const personality = Object.fromEntries(["trait", "ideal", "bond", "flaw", "backgroundTrait", "backgroundBond", "appearance", "history", "notes"].map((key) => [key, str(personalityRaw[key])])) as CharacterSheet["personality"];
   const legacy = readLegacyValues(raw);
-  const known = ["summons", "version", "avatarDataUrl", "name", "legendDestiny", "legacyLegendEntries", "filiation", "pathName", "origin", "race", "background", "player", "level", "hp", "hpMax", "hpMaxOverride", "hpTemp", "mana", "manaMax", "manaMaxOverride", "divineResource", "resourceMaxOverride", "favor", "sustain", "castingAttribute", "castingDcOverride", "attributes", "saveProficiencies", "domSkill", "skillRanks", "skillRankOverrides", "speed", "initiativeExtra", "caExtra", "caOverride", "initiativeOverride", "speedOverride", "perceptionOverride", "dracmas", "humanMoney", "humanMoneyCurrency", "money", "currency", "filiationSignatures", "abilityGroups", "equipment", "effects", "personality", "importReport"];
+  const known = ["journal", "summons", "version", "avatarDataUrl", "name", "legendDestiny", "legacyLegendEntries", "filiation", "pathName", "origin", "race", "background", "player", "level", "hp", "hpMax", "hpMaxOverride", "hpTemp", "mana", "manaMax", "manaMaxOverride", "divineResource", "resourceMaxOverride", "favor", "sustain", "castingAttribute", "castingDcOverride", "attributes", "saveProficiencies", "domSkill", "skillRanks", "skillRankOverrides", "speed", "initiativeExtra", "caExtra", "caOverride", "initiativeOverride", "speedOverride", "perceptionOverride", "dracmas", "humanMoney", "humanMoneyCurrency", "money", "currency", "filiationSignatures", "abilityGroups", "equipment", "effects", "personality", "importReport"];
   report.unknownFields.push(...Object.keys(raw).filter((key) => !known.includes(key)));
   const base: CharacterSheet = {
     ...INITIAL_SHEET, version: 3, avatarDataUrl: str(raw.avatarDataUrl), name: str(raw.name), legendDestiny: str(raw.legendDestiny),
@@ -165,7 +166,7 @@ export function normalizeImportedSheet(candidate: unknown): { sheet: CharacterSh
     humanMoney: Math.max(0, num(first(raw, "humanMoney", "money"))),
     humanMoneyCurrency: str(first(raw, "humanMoneyCurrency", "currency"), "R$"),
     filiationSignatures: normalizeSignatures(raw.filiationSignatures, str(raw.filiation), report), abilityGroups: groups,
-    legacyLegendEntries: legacyLegend.map((item, index) => normalizeAbility(item, "legend", index, report)), equipment: arr(raw.equipment).map((item, index) => normalizeEquipment(item, index, report)), effects: arr(raw.effects).map(normalizeEffect), summons: normalizeSummons(raw.summons), personality,
+    legacyLegendEntries: legacyLegend.map((item, index) => normalizeAbility(item, "legend", index, report)), equipment: arr(raw.equipment).map((item, index) => normalizeEquipment(item, index, report)), effects: arr(raw.effects).map(normalizeEffect), journal: normalizeJournal(raw.journal), summons: normalizeSummons(raw.summons), personality,
   };
   const migrated = migrateSheet(base, legacy, report);
   const derived = deriveStats(migrated);

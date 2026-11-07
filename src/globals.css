@@ -2854,3 +2854,304 @@ section[id], #combate { scroll-margin-top: 72px; }
 @media print {
   .summons-grid, .summons-meter { display: none; }
 }
+/* Diário da campanha: livro aberto por cima da ficha, na cor do deus. */
+.journal-button { display: inline-flex; align-items: center; gap: 7px; }
+.journal-button svg { width: 14px; height: 14px; flex: none; }
+.journal-book {
+  --journal-leather: color-mix(in srgb, var(--deity) 34%, var(--deity-deep));
+  --journal-accent: color-mix(in srgb, var(--deity) 78%, var(--ink));
+  width: min(1140px, calc(100% - 48px));
+  max-width: none;
+  height: min(720px, calc(100dvh - 64px));
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+}
+.journal-book::backdrop { background: color-mix(in srgb, var(--night) 82%, transparent); }
+.journal-book[open] { animation: journal-open .32s cubic-bezier(.16, 1, .3, 1); }
+@keyframes journal-open { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+.journal-cover {
+  position: relative;
+  height: 100%;
+  padding: 16px 18px;
+  border-radius: 8px 12px 12px 8px;
+  background-color: var(--journal-leather);
+  background-image:
+    linear-gradient(115deg, rgba(255, 255, 255, .07), transparent 40%, rgba(0, 0, 0, .22)),
+    radial-gradient(ellipse at 50% 118%, transparent 64%, rgba(255, 226, 170, .06) 65% 68%, transparent 69%);
+  background-size: auto, 54px 22px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .06), 0 28px 70px -10px rgba(0, 0, 0, .6), 0 8px 20px rgba(0, 0, 0, .35);
+}
+.journal-cover::before { content: ""; position: absolute; inset: 7px; border: 1px dashed rgba(233, 200, 140, .32); border-radius: 5px 8px 8px 5px; pointer-events: none; }
+.journal-close {
+  position: absolute; right: -14px; top: -14px; z-index: 3;
+  width: 34px; height: 34px; padding: 0; display: grid; place-items: center;
+  color: #f4e4c4; background: var(--journal-leather);
+  border: 1px solid rgba(233, 200, 140, .45); border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .35); cursor: pointer;
+}
+.journal-close:hover { background: var(--deity-deep); }
+.journal-close svg { width: 15px; height: 15px; }
+.journal-pages { position: relative; height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+.journal-page { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.journal-index {
+  padding: 30px 34px 22px;
+  border-radius: 3px 0 0 3px;
+  background: linear-gradient(90deg, #ecdfc4 0, var(--paper) 12%, var(--paper) 82%, #ddc9a3 100%);
+}
+.journal-sheet {
+  padding: 30px 40px 18px 48px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(90deg, rgba(105, 70, 25, .22) 0, rgba(105, 70, 25, .06) 22px, transparent 56px), var(--paper-bright);
+}
+.journal-index::before, .journal-sheet::after {
+  content: ""; position: absolute; top: 3px; bottom: 3px; width: 5px;
+  background: repeating-linear-gradient(90deg, #f6ecd6 0 1px, #d8c49c 1px 2px);
+}
+.journal-index::before { left: -5px; border-radius: 2px 0 0 2px; }
+.journal-sheet::after { right: -5px; border-radius: 0 2px 2px 0; }
+.journal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.journal-head h2 { margin: 0; font: 700 42px/1 "Cormorant Garamond", Georgia, serif; letter-spacing: -.01em; }
+.journal-head p { margin: 6px 0 0; color: var(--muted); font: italic 500 17px/1.3 "Cormorant Garamond", Georgia, serif; }
+.journal-picker { display: none; }
+.journal-tools { display: flex; gap: 8px; margin: 20px 0 6px; }
+.journal-search {
+  flex: 1; min-width: 0; height: 36px; padding: 0 11px;
+  display: flex; align-items: center; gap: 8px;
+  color: var(--muted); background: rgba(255, 249, 236, .7);
+  border: 1px solid var(--line); border-radius: 4px;
+}
+.journal-search:focus-within { border-color: var(--journal-accent); background: var(--paper-bright); }
+.journal-search svg { width: 15px; height: 15px; flex: none; }
+.journal-search input { flex: 1; min-width: 0; height: 100%; padding: 0; color: var(--ink); background: transparent; border: 0; outline: 0; font-size: 14px; }
+.journal-new {
+  height: 36px; padding: 0 13px; flex: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  color: #fff8ee; background: var(--journal-accent);
+  border: 1px solid var(--journal-accent); border-radius: 4px;
+  font-size: 13px; font-weight: 650; cursor: pointer;
+  box-shadow: 0 2px 4px -1px rgba(60, 20, 10, .35);
+  transition: background .15s, transform .15s;
+}
+.journal-new:hover { background: color-mix(in srgb, var(--journal-accent) 80%, black); transform: translateY(-1px); }
+.journal-new svg { width: 14px; height: 14px; }
+.journal-list { flex: 1; min-height: 0; margin: 10px -10px 0; padding: 0 4px 0 0; overflow-y: auto; list-style: none; }
+.journal-list li { border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); }
+.journal-list li:last-child { border-bottom: 0; }
+.journal-list li button {
+  width: 100%; padding: 11px 10px;
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: baseline; gap: 0 10px;
+  color: inherit; text-align: left; background: transparent; border: 0; border-radius: 4px; cursor: pointer;
+}
+.journal-list li button:hover { background: color-mix(in srgb, var(--paper-bright) 55%, transparent); }
+.journal-list li button.is-active { background: var(--paper-bright); box-shadow: 0 1px 2px rgba(90, 60, 20, .12), 0 4px 14px -6px rgba(90, 60, 20, .25); }
+.journal-n { color: var(--bronze); text-align: right; font: 600 20px/1 "Cormorant Garamond", Georgia, serif; }
+.journal-list .is-active .journal-n { color: var(--journal-accent); }
+.journal-item-text { min-width: 0; }
+.journal-item-text strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 20px/1.15 "Cormorant Garamond", Georgia, serif; }
+.journal-item-text small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+.journal-pending {
+  align-self: center; min-width: 20px; height: 20px; padding: 0 6px;
+  display: inline-grid; place-items: center;
+  color: #fff8ee; background: var(--journal-accent); border-radius: 10px;
+  font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.journal-none { padding: 14px 10px; color: var(--muted); font: italic 500 17px/1.3 "Cormorant Garamond", Georgia, serif; }
+.journal-ribbon {
+  position: absolute; right: 58px; top: -16px; width: 26px; height: 96px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(0, 0, 0, .12), transparent 30%, rgba(255, 255, 255, .12) 50%, transparent 70%), var(--journal-accent);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 86%, 0 100%);
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .25));
+}
+.journal-chapter { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px 18px; padding-right: 80px; }
+.journal-number { grid-row: 1 / 3; color: var(--journal-accent); font: 700 68px/.8 "Cormorant Garamond", Georgia, serif; letter-spacing: -.02em; }
+.journal-title {
+  align-self: end; width: 100%; min-height: 0; margin: 0; padding: 0;
+  resize: none; overflow: hidden; field-sizing: content;
+  color: var(--ink); background: transparent; border: 0; outline: 0;
+  font: 700 36px/1.05 "Cormorant Garamond", Georgia, serif; letter-spacing: -.01em; text-wrap: balance;
+}
+.journal-title::placeholder { color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.journal-date { position: relative; align-self: start; width: fit-content; color: var(--muted); font: italic 500 17px/1.2 "Cormorant Garamond", Georgia, serif; cursor: pointer; }
+.journal-date:hover span { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.journal-date input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.journal-date input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+.journal-rule { height: 1px; margin: 18px 0 10px; background: linear-gradient(90deg, var(--line), transparent); }
+.journal-tags { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.journal-tags label { flex: 1 1 180px; min-width: 0; display: flex; align-items: center; gap: 7px; color: var(--bronze); }
+.journal-tags svg { width: 15px; height: 15px; flex: none; }
+.journal-tags input {
+  flex: 1; min-width: 0; height: 30px; padding: 0;
+  color: var(--ink); background: transparent; border: 0; border-bottom: 1px dashed transparent; outline: 0;
+  font-size: 13.5px; font-weight: 600;
+}
+.journal-tags input:hover, .journal-tags input:focus { border-bottom-color: var(--line); }
+.journal-tags input::placeholder { color: var(--muted); font-weight: 400; }
+.journal-writing {
+  --rule: 32px;
+  flex: 1; min-height: 0; margin-top: 8px; padding-right: 6px; overflow-y: auto;
+  background: repeating-linear-gradient(transparent 0 calc(var(--rule) - 1px), rgba(185, 134, 63, .24) calc(var(--rule) - 1px) var(--rule));
+  background-attachment: local;
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
+.journal-body {
+  display: block; width: 100%; min-height: calc(var(--rule) * 4); margin: 0; padding: 0;
+  resize: none; overflow: hidden; field-sizing: content;
+  color: #2b2720; background: transparent; border: 0; outline: 0;
+  font: 500 19px/var(--rule) "Cormorant Garamond", Georgia, serif; caret-color: var(--journal-accent);
+}
+.journal-body::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); font-style: italic; }
+.journal-body::selection, .journal-title::selection, .journal-todos input::selection { background: color-mix(in srgb, var(--deity) 22%, transparent); }
+.journal-todos { margin: 0; padding: 0; list-style: none; }
+.journal-todos li { height: var(--rule); display: flex; align-items: center; gap: 8px; }
+.journal-todos li:not(.journal-todo-add) > button { width: 22px; height: 22px; padding: 0; flex: none; display: grid; place-items: center; color: var(--bronze); background: transparent; border: 0; border-radius: 3px; cursor: pointer; }
+.journal-todos li:not(.journal-todo-add) > button svg { width: 16px; height: 16px; }
+.journal-todos li.is-done > button { color: var(--journal-accent); }
+.journal-todos input {
+  flex: 1; min-width: 0; height: 100%; padding: 0;
+  color: #2b2720; background: transparent; border: 0; outline: 0;
+  font: 500 19px/var(--rule) "Cormorant Garamond", Georgia, serif; caret-color: var(--journal-accent);
+}
+.journal-todos li.is-done input { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(91, 85, 74, .55); }
+.journal-todos input::placeholder { color: color-mix(in srgb, var(--muted) 60%, transparent); font-style: italic; }
+.journal-todo-add button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0 4px; height: 26px;
+  color: var(--journal-accent); background: transparent; border: 0; border-radius: 3px;
+  font-size: 13px; font-weight: 650; white-space: nowrap; cursor: pointer;
+}
+.journal-todo-add svg { width: 13px; height: 13px; }
+.journal-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+.journal-foot span { display: inline-flex; align-items: center; gap: 6px; }
+.journal-foot span svg { width: 13px; height: 13px; color: #4f7a4a; }
+.journal-foot button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; color: var(--muted); background: transparent; border: 0; border-radius: 3px; font-size: 12px; cursor: pointer; }
+.journal-foot button:hover { color: var(--health); }
+.journal-foot button svg { width: 13px; height: 13px; }
+.journal-empty { margin: auto; max-width: 380px; display: grid; justify-items: center; gap: 16px; text-align: center; }
+.journal-empty .journal-number { font-size: 84px; }
+.journal-empty p { margin: 0; color: var(--muted); font: italic 500 19px/1.45 "Cormorant Garamond", Georgia, serif; }
+.journal-book button:focus-visible, .journal-book select:focus-visible { outline: 2px solid var(--journal-accent); outline-offset: 2px; }
+.journal-book .journal-date:focus-within span { outline: 2px solid var(--journal-accent); outline-offset: 2px; }
+@media (max-width: 760px) {
+  .journal-book { width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; }
+  .journal-cover { padding: 8px; border-radius: 0; }
+  .journal-cover::before { inset: 3px; border-radius: 0; }
+  .journal-close { right: 14px; top: 14px; width: 32px; height: 32px; }
+  .journal-pages { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .journal-index { padding: 14px 56px 12px 16px; border-radius: 3px 3px 0 0; background: var(--paper); }
+  .journal-index::before, .journal-sheet::after { display: none; }
+  .journal-head { align-items: center; }
+  .journal-head h2 { font-size: 30px; }
+  .journal-head p, .journal-search, .journal-list { display: none; }
+  .journal-picker {
+    display: block; min-width: 0; max-width: 58%; height: 32px; padding: 0 8px;
+    color: var(--ink); background: var(--paper-bright); border: 1px solid var(--line); border-radius: 4px;
+    font-size: 13px; font-weight: 600;
+  }
+  .journal-tools { margin: 10px 0 0; }
+  .journal-new { width: 100%; justify-content: center; height: 34px; }
+  .journal-sheet { padding: 18px 18px 10px; border-radius: 0 0 3px 3px; background: var(--paper-bright); }
+  .journal-chapter { padding-right: 36px; gap: 2px 12px; }
+  .journal-number { font-size: 50px; }
+  .journal-title { font-size: 27px; }
+  .journal-date { font-size: 15px; }
+  .journal-ribbon { right: 22px; top: -4px; width: 20px; height: 62px; }
+  .journal-body, .journal-todos input { font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .journal-book[open] { animation: none; } }
+@media print { .journal-book { display: none !important; } }
+/* ===== Talentos: cartão enxuto e lista do livro ===== */
+.talent-card .talent-row { grid-template-columns: minmax(0, 1fr) auto; }
+.talent-detail { padding-left: 15px; }
+.talent-effects { margin: 0; padding-left: 18px; display: grid; gap: 5px; color: #39362f; font-size: 13px; line-height: 1.5; }
+.talent-effects li::marker { color: var(--deity); }
+.talent-text { margin: 0; color: #39362f; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+.talent-prereq { margin: 0 0 8px; color: var(--muted); font-size: var(--text-small); font-weight: 700; }
+.talent-auto { margin: 10px 0 0; padding: 6px 10px; color: var(--deity-deep); background: color-mix(in srgb, var(--deity-light) 18%, var(--paper-bright)); border-left: 3px solid var(--deity); font-size: var(--text-small); font-weight: 700; }
+.talent-notes { margin: 8px 0 0; font-size: var(--text-small); color: var(--muted); }
+.talent-choice { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: var(--text-small); font-weight: 800; color: var(--muted); }
+.talent-choice select, .talent-choice input { min-height: 32px; padding: 4px 8px; color: var(--ink); background: var(--paper-bright); border: 1px solid var(--deity); border-radius: 4px; font: inherit; font-weight: 700; }
+.talent-detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.talent-detail-actions .remove-action { margin: 0; }
+.talent-editor textarea { min-height: 110px; }
+
+.talent-picker {
+  width: min(680px, calc(100% - 24px));
+  max-height: min(760px, calc(100dvh - 32px));
+  padding: 0;
+  color: var(--ink);
+  background: var(--paper-bright);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--deity);
+  border-radius: 6px;
+  box-shadow: 0 24px 60px rgba(7, 26, 33, .45);
+}
+.talent-picker::backdrop { background: rgba(7, 26, 33, .62); }
+.talent-picker-inner { display: flex; flex-direction: column; max-height: inherit; }
+.talent-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 8px; }
+.talent-picker-head h2 { margin: 0; font-family: "Cormorant Garamond", Georgia, serif; font-size: 30px; font-weight: 700; line-height: 1; }
+.talent-search { display: block; padding: 0 20px 12px; }
+.talent-search input { width: 100%; min-height: 42px; padding: 8px 12px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 4px; font: inherit; font-size: 15px; }
+.talent-search input:focus { outline: 2px solid var(--deity); outline-offset: 1px; border-color: var(--deity); }
+.talent-picker-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 12px 8px; border-top: 1px solid var(--line); }
+.talent-group h3 { position: sticky; top: 0; z-index: 1; margin: 0; padding: 12px 8px 6px; color: var(--deity-deep); background: var(--paper-bright); font-family: "Cormorant Garamond", Georgia, serif; font-size: 21px; font-weight: 700; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.talent-group ul { margin: 0; padding: 0; list-style: none; }
+.talent-option { width: 100%; display: grid; gap: 2px; padding: 10px 8px; color: inherit; background: transparent; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 40%, transparent); border-radius: 0; text-align: left; cursor: pointer; }
+.talent-option:hover, .talent-option:focus-visible { background: color-mix(in srgb, var(--deity-light) 16%, var(--paper-bright)); outline: none; box-shadow: inset 3px 0 0 var(--deity); }
+.talent-option strong { font-family: "Cormorant Garamond", Georgia, serif; font-size: 19px; line-height: 1.15; }
+.talent-summary { color: #4a463d; font-size: 13px; line-height: 1.4; }
+.talent-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; }
+.talent-tags em { padding: 1px 7px; color: var(--muted); background: color-mix(in srgb, var(--paper-deep) 60%, transparent); border-radius: 99px; font-size: var(--text-label); font-style: normal; font-weight: 750; }
+.talent-tags .tag-auto { color: var(--deity-deep); background: color-mix(in srgb, var(--deity-light) 22%, transparent); }
+.talent-tags .tag-missing { color: #8a4b00; background: #fff1d6; }
+.talent-tags .tag-owned { color: #fff; background: var(--muted); }
+.talent-option.is-owned strong { color: var(--muted); }
+.talent-empty { margin: 16px 8px; color: var(--muted); font-size: 14px; }
+.talent-picker-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 20px 16px; border-top: 1px solid var(--line); }
+.talent-picker-foot button { min-height: 34px; padding: 6px 12px; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 4px; font-size: var(--text-small); font-weight: 800; cursor: pointer; }
+.talent-picker-foot button:hover { background: var(--paper-deep); }
+.talent-picker-foot small { color: var(--muted); font-size: var(--text-small); }
+@media print { .talent-picker { display: none !important; } .ability-print .talent-effects { font-size: 8pt; gap: 1mm; } }
+
+/* PDF no celular: passo a passo antes da tela de impressão do sistema. */
+.print-help {
+  width: min(440px, calc(100% - 24px));
+  max-height: min(640px, calc(100dvh - 32px));
+  padding: 0;
+  color: var(--ink);
+  background: var(--paper-bright);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--bronze);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(7, 26, 33, .45);
+}
+.print-help::backdrop { background: rgba(7, 26, 33, .62); }
+.print-help-inner { display: grid; gap: 16px; padding: 20px 20px 18px; }
+.print-help h2 { margin: 0; font-family: "Cormorant Garamond", Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.05; }
+.print-help-lead { margin: 0; color: var(--ink); font-size: 14px; line-height: 1.5; }
+.print-help-formats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; border: 0; }
+.print-help-formats legend { margin-bottom: 8px; padding: 0; color: var(--muted); font-size: var(--text-label); font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+.print-help-formats label { position: relative; min-height: 64px; display: grid; align-content: center; justify-items: center; gap: 2px; padding: 8px 6px; text-align: center; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.print-help-formats label.is-on { background: color-mix(in srgb, var(--deity-light) 22%, var(--paper-bright)); border-color: var(--deity); box-shadow: inset 0 0 0 1px var(--deity); }
+.print-help-formats input { position: absolute; opacity: 0; pointer-events: none; }
+.print-help-formats label:has(input:focus-visible) { outline: 2px solid var(--aegean); outline-offset: 2px; }
+.print-help-formats b { font-family: "Cormorant Garamond", Georgia, serif; font-size: 22px; line-height: 1; }
+.print-help-formats small { color: var(--muted); font-size: 11.5px; line-height: 1.25; }
+.print-help-steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.print-help-steps li { display: grid; grid-template-columns: 28px 1fr; align-items: start; gap: 10px; font-size: 14px; line-height: 1.45; counter-increment: step; }
+.print-help-steps li::before { content: counter(step); width: 28px; height: 28px; display: grid; place-items: center; color: #fff; background: var(--deity); border-radius: 50%; font-size: 13px; font-weight: 800; }
+.print-help-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.print-help-actions button, .print-help-actions a { flex: 1 1 140px; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; font-weight: 750; text-decoration: none; cursor: pointer; }
+.print-help-actions .print-help-primary { color: #17120b; background: #d3aa64; border-color: #c8995a; }
+.print-help-actions button:focus-visible, .print-help-actions a:focus-visible { outline: 2px solid var(--aegean); outline-offset: 2px; }
+@media (max-width: 580px) {
+  .print-help { width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 12px 12px 0 0; border-bottom: 0; }
+  .print-help-inner { padding: 20px 16px calc(18px + env(safe-area-inset-bottom)); }
+  /* No celular o tamanho da folha é escolhido no passo a passo; o botão PDF ganha espaço para o dedo. */
+  .app-nav .pdf-format-control { display: none; }
+  .document-actions button { min-height: 40px; }
+  .document-actions .pdf-button { min-width: 52px; padding-inline: 10px; font-size: 12px; }
+}
+@media print { .print-help { display: none !important; } }

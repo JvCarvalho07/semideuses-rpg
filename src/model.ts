@@ -1,5 +1,6 @@
 import { SKILL_LIST, type ArmorCategory } from "./rules";
 import type { Summon } from "./summons";
+import type { JournalEntry } from "./journal";
 
 export type AttributeKey = "for" | "des" | "con" | "int" | "sab" | "car";
 export type AbilityCategory = "abilities" | "filiation" | "path" | "skills" | "talents";
@@ -147,6 +148,8 @@ export type CharacterSheet = {
   effects: Effect[];
   /** Criaturas invocadas em campo (servos, autômatos, espíritos). */
   summons: Summon[];
+  /** Diário da campanha: uma entrada por sessão. */
+  journal: JournalEntry[];
   personality: {
     trait: string;
     ideal: string;
@@ -268,6 +271,7 @@ export const INITIAL_SHEET: CharacterSheet = {
   equipment: [],
   effects: [],
   summons: [],
+  journal: [],
   personality: {
     trait: "",
     ideal: "",

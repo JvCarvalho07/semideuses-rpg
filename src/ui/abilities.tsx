@@ -4,6 +4,7 @@ import { type Derived } from "../rules";
 import { ABILITY_SECTION_ASSETS } from "./config";
 import { formatActivationLabel, formatCostLabel, formatCostValue } from "./format";
 import { SignatureWorkspace } from "./signatures";
+import { TalentCard, TalentPicker, talentEntry, type TalentContext } from "./talents";
 
 export function AbilityEditor({
   ability,
@@ -59,15 +60,16 @@ export function AbilityEditor({
 }
 
 export function AbilityReadOnly({ ability }: { ability: Ability }) {
-  const fields = [
+  // Só os campos preenchidos: "—" em metade da grade só ocupa espaço.
+  const fields = ([
     ["Nível", ability.level || 1],
-    ["Rank", ability.rank || "—"],
-    ["Custo", formatCostValue(ability.cost) || "—"],
-    ["Ação", ability.activation || "Não definida"],
-    ["Alcance", ability.range || "—"],
-    ["Duração", ability.duration || "—"],
-    ["Recarga", ability.recharge || "—"],
-  ];
+    ["Rank", ability.rank],
+    ["Custo", formatCostValue(ability.cost)],
+    ["Ação", ability.activation],
+    ["Alcance", ability.range],
+    ["Duração", ability.duration],
+    ["Recarga", ability.recharge],
+  ] as Array<[string, string | number]>).filter(([, value]) => value !== "" && value !== "—" && value !== undefined && value !== null);
   return (
     <div className="ability-readonly" aria-label={`Detalhes de ${ability.name || "habilidade"}`}>
       <div className="ability-detail-grid">
@@ -164,6 +166,7 @@ export function AbilitySection({
   actionFilter,
   categoryFilter,
   expandAll,
+  talentContext,
 }: {
   category: AbilityCategory;
   items: Ability[];
@@ -172,7 +175,10 @@ export function AbilitySection({
   actionFilter: string;
   categoryFilter: string;
   expandAll: boolean | undefined;
+  talentContext?: TalentContext;
 }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [freshId, setFreshId] = useState<string | null>(null);
   if (categoryFilter !== "Todas" && categoryFilter !== category) return null;
   const meta = ABILITY_META[category];
   const normalizedSearch = search.trim().toLocaleLowerCase();
@@ -180,7 +186,8 @@ export function AbilitySection({
     const haystack = [item.name, item.rank, item.activation, item.cost, item.description, item.range, item.duration, item.recharge, item.notes].join(" ").toLocaleLowerCase();
     return (!normalizedSearch || haystack.includes(normalizedSearch)) && (!actionFilter || item.activation === actionFilter);
   });
-  const add = () =>
+  const isTalents = category === "talents" && talentContext !== undefined;
+  const addBlank = () =>
     onChange([
       ...items,
       {
@@ -205,12 +212,21 @@ export function AbilitySection({
           <small>{meta.description}</small>
         </div>
         <span title={visibleItems.length === items.length ? undefined : `${visibleItems.length} visíveis de ${items.length}`}>{visibleItems.length === items.length ? items.length : `${visibleItems.length}/${items.length}`}</span>
-        <button type="button" onClick={add}>Adicionar</button>
+        <button type="button" onClick={() => (isTalents ? setPickerOpen(true) : addBlank())} aria-haspopup={isTalents ? "dialog" : undefined}>Adicionar</button>
       </div>
       <div className="ability-list">
         {items.length === 0 && <p className="empty-state"><img src={ABILITY_SECTION_ASSETS[category].src} width={34} height={34} loading="lazy" decoding="async" alt="" />Vazio. Adicione a primeira entrada nesta categoria.</p>}
         {items.length > 0 && visibleItems.length === 0 && <p className="empty-state">Nenhuma entrada corresponde aos filtros atuais.</p>}
-        {visibleItems.map((item) => (
+        {visibleItems.map((item) => isTalents ? (
+          <TalentCard
+            key={item.id}
+            ability={item}
+            startOpen={item.id === freshId}
+            forceOpen={expandAll}
+            onUpdate={(updated) => onChange(items.map((current) => current.id === item.id ? updated : current))}
+            onRemove={() => onChange(items.filter((current) => current.id !== item.id))}
+          />
+        ) : (
           <AbilityCard
             key={item.id}
             ability={item}
@@ -221,6 +237,23 @@ export function AbilitySection({
           />
         ))}
       </div>
+      {isTalents && pickerOpen && (
+        <TalentPicker
+          open={pickerOpen}
+          context={talentContext}
+          onClose={() => setPickerOpen(false)}
+          onPick={(talent) => {
+            const entry = talentEntry(talent, makeId(category), talentContext.level);
+            setFreshId(entry.id);
+            onChange([...items, entry]);
+            setPickerOpen(false);
+          }}
+          onCustom={() => {
+            setPickerOpen(false);
+            addBlank();
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -233,10 +266,13 @@ export function AbilityLayout({
   categoryFilter,
   expandAll,
   resource,
+  skillRanks,
   onChange,
 }: {
   sheet: CharacterSheet;
   resource: Derived["resource"];
+  /** Nível de cada perícia, para conferir pré-requisito de talento. */
+  skillRanks: Record<string, number>;
   compact: boolean;
   search: string;
   actionFilter: string;
@@ -253,6 +289,7 @@ export function AbilityLayout({
       actionFilter={actionFilter}
       categoryFilter={categoryFilter}
       expandAll={expandAll}
+      talentContext={category === "talents" ? { level: sheet.level, attributes: sheet.attributes, skillRanks, talents: sheet.abilityGroups.talents } : undefined}
       onChange={(items) => onChange((current) => ({ ...current, abilityGroups: { ...current.abilityGroups, [category]: items } }))}
     />
   );
