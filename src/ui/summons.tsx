@@ -1,38 +1,19 @@
 import { useState } from "react";
-import { ASSETS } from "../assets";
 import type { Ability } from "../model";
 import { signed } from "../rules";
 import { makeSummons, presetAbility, type Summon, type SummonPreset } from "../summons";
 
 const ART_BASE = `${import.meta.env.BASE_URL}assets/`;
-const sealSrc = (art: string) => `${ART_BASE}summon-${art || "criatura"}.webp`;
+/** Arte pintada de cada tipo de criatura (gerada para o site, retrato 2:3). */
+const cardSrc = (art: string, size: 480 | 800) => `${ART_BASE}summons/card-${art || "criatura"}-${size}.webp`;
 
-type Plate = { id: string; wide: boolean; focus: string; credit: string; licence: string; page: string };
-
-/** Fotografias de peças gregas de museu (Wikimedia Commons), uma por tipo de criatura. */
-const PLATES: Record<string, Plate> = {
-  servo: { id: "f60424081", wide: true, focus: "50% 42%", credit: "Elmo coríntio, Metropolitan Museum", licence: "CC0", page: "https://commons.wikimedia.org/wiki/File:Bronze_helmet_of_Corinthian_type_MET_DP105637.jpg" },
-  esqueleto: { id: "f16888390", wide: false, focus: "50% 34%", credit: "Mosaico Carpe Diem, Museu de Nápoles", licence: "domínio público", page: "https://commons.wikimedia.org/wiki/File:Carpe_Diem_MAN_Napoli_Inv9978.jpg" },
-  cao: { id: "f2192736", wide: true, focus: "60% 58%", credit: "Hidria de Cérbero, Louvre", licence: "domínio público", page: "https://commons.wikimedia.org/wiki/File:Herakles_Kerberos_Eurystheus_Louvre_E701.jpg" },
-  automato: { id: "f22906318", wide: true, focus: "46% 38%", credit: "Vaso de Talos, Forzaruvo94", licence: "CC BY-SA 3.0", page: "https://commons.wikimedia.org/wiki/File:Vaso_di_Talos_particolare.JPG" },
-  torreta: { id: "f7246353", wide: true, focus: "42% 58%", credit: "Artilharia antiga, SBA73", licence: "CC BY-SA 2.0", page: "https://commons.wikimedia.org/wiki/File:Ancient_Mechanical_Artillery._Pic_01.jpg" },
-  corcel: { id: "f33004484", wide: false, focus: "44% 58%", credit: "Mosaico do hipocampo, Carole Raddato", licence: "CC BY-SA 2.0", page: "https://commons.wikimedia.org/wiki/File:Mosaic_with_Hippocamp,_a_mythological_creature_with_hybrid_body,_half_horse_and_half_fish,_from_S%C3%A3o_Sebasti%C3%A3o_do_Freixo,_National_Archaeology_Museum_of_Lisbon,_Portugal_(13188929355).jpg" },
-  cacadora: { id: "f1734884", wide: true, focus: "62% 28%", credit: "Diana de Versalhes, Louvre", licence: "domínio público", page: "https://commons.wikimedia.org/wiki/File:Detail_Diana_Versailles_Louvre_Ma589.jpg" },
-  loba: { id: "f145564917", wide: true, focus: "34% 44%", credit: "Loba Capitolina, Roma", licence: "CC0", page: "https://commons.wikimedia.org/wiki/File:Lupa_Capitolina,_Rome.jpg" },
-  criatura: { id: "f45894444", wide: false, focus: "55% 38%", credit: "Lécito com Caronte, Carole Raddato", licence: "CC BY-SA 2.0", page: "https://commons.wikimedia.org/wiki/File:Attic_Red_Figure_(White_Ground)_Lekythos_with_Charon,_attributed_to_the_Tymbos_painter,_ca_500_-_450_BC,_Ashmolean_Museum,_Oxford,_UK_(22681344331).jpg" },
-};
-const plateFor = (art: string) => PLATES[art] ?? PLATES.criatura;
-const photoSrc = (plate: Plate, size: 500 | 960) => `${ART_BASE}summons/photo-${plate.id}-${size}.webp`;
-
-function Photo({ art, sizes, className }: { art: string; sizes: string; className?: string }) {
-  const plate = plateFor(art);
+function Art({ art, sizes, className }: { art: string; sizes: string; className?: string }) {
   return (
     <img
       className={className}
-      src={photoSrc(plate, 500)}
-      srcSet={plate.wide ? `${photoSrc(plate, 500)} 500w, ${photoSrc(plate, 960)} 960w` : undefined}
-      sizes={plate.wide ? sizes : undefined}
-      style={{ objectPosition: plate.focus }}
+      src={cardSrc(art, 480)}
+      srcSet={`${cardSrc(art, 480)} 480w, ${cardSrc(art, 800)} 800w`}
+      sizes={sizes}
       alt=""
       loading="lazy"
       decoding="async"
@@ -67,46 +48,49 @@ function SummonCard({ summon, kind, startOpen, onUpdate, onRemove }: { summon: S
   const hurt = !down && ratio <= 0.5;
   return (
     <article className={`summon-card ${down ? "is-down" : ""} ${hurt ? "is-hurt" : ""}`}>
-      <div className="summon-photo">
-        <Photo art={summon.art} sizes="(max-width: 700px) 92vw, 360px" />
-        <img className="summon-seal" src={sealSrc(summon.art)} width={56} height={56} alt="" loading="lazy" decoding="async" />
+      <div className="summon-face">
+        <Art art={summon.art} className="summon-art" sizes="(max-width: 700px) 92vw, 340px" />
         <button type="button" className="summon-edit" aria-expanded={open} aria-label={open ? "Fechar edição" : `Editar ${summon.name}`} onClick={() => setOpen(!open)}>{Icon.edit}</button>
-        <div className="summon-plate">
-          <h3>{summon.name || "Criatura"}</h3>
-          <span>{[summon.source || "Invocação", kind].filter(Boolean).join(" · ")}</span>
-        </div>
         {down && <span className="summon-fallen">Caiu</span>}
-      </div>
-      <div className="summon-body">
-        <div className="summon-life">
-          <label className="summon-hp-value">
-            <span className="sr-only">PV atuais de {summon.name}</span>
-            <input type="number" min={0} max={summon.hpMax} value={summon.hp} onChange={(event) => setHp(Number(event.target.value))} />
-            <small>/ {summon.hpMax} PV</small>
-          </label>
-          <div className="summon-steps">
-            <button type="button" onClick={() => setHp(summon.hp - 1)} aria-label={`Tirar 1 PV de ${summon.name}`}>−</button>
-            <button type="button" onClick={() => setHp(summon.hp + 1)} aria-label={`Somar 1 PV a ${summon.name}`}>+</button>
+        <div className="summon-panel">
+          <header className="summon-plate">
+            <h3>{summon.name || "Criatura"}</h3>
+            <span>{[summon.source || "Invocação", kind].filter(Boolean).join(" · ")}</span>
+          </header>
+          <div className="summon-life">
+            <label className="summon-hp-value">
+              <span className="sr-only">PV atuais de {summon.name}</span>
+              <input type="number" min={0} max={summon.hpMax} value={summon.hp} onChange={(event) => setHp(Number(event.target.value))} />
+              <small>/ {summon.hpMax} PV</small>
+            </label>
+            <div className="summon-steps">
+              <button type="button" onClick={() => setHp(summon.hp - 1)} aria-label={`Tirar 1 PV de ${summon.name}`}>−</button>
+              <button type="button" onClick={() => setHp(summon.hp + 1)} aria-label={`Somar 1 PV a ${summon.name}`}>+</button>
+            </div>
           </div>
+          <div className="summon-bar" role="meter" aria-label="PV" aria-valuemin={0} aria-valuemax={summon.hpMax} aria-valuenow={summon.hp}><i style={{ width: `${ratio * 100}%` }} /></div>
+          <dl className="summon-stats">
+            <div><dt>CA</dt><dd>{summon.ca}</dd></div>
+            <div><dt>{summon.speed ? "Desloc." : "Imóvel"}</dt><dd>{summon.speed ? `${summon.speed} m` : "—"}</dd></div>
+            <div><dt>Resist.</dt><dd>{signed(summon.save)}</dd></div>
+          </dl>
+          <p className="summon-attack">
+            {Icon.swords}
+            <span><b>{signed(summon.attackBonus)}</b> para acertar{summon.damage && <> · <b>{summon.damage}</b></>}{summon.damageType && <em> {summon.damageType}</em>}</span>
+          </p>
         </div>
-        <div className="summon-bar" role="meter" aria-label="PV" aria-valuemin={0} aria-valuemax={summon.hpMax} aria-valuenow={summon.hp}><i style={{ width: `${ratio * 100}%` }} /></div>
-        <dl className="summon-stats">
-          <div><img src={ASSETS.stats.armor.src} width={30} height={30} alt="" /><dt>CA</dt><dd>{summon.ca}</dd></div>
-          <div><img src={ASSETS.stats.speed.src} width={30} height={30} alt="" /><dt>{summon.speed ? "Desloc." : "Imóvel"}</dt><dd>{summon.speed ? `${summon.speed} m` : "—"}</dd></div>
-          <div><img src={ASSETS.stats.savingThrows.src} width={30} height={30} alt="" /><dt>Resist.</dt><dd>{signed(summon.save)}</dd></div>
-        </dl>
-        <p className="summon-attack">
-          {Icon.swords}
-          <span><b>{signed(summon.attackBonus)}</b> para acertar{summon.damage && <> · <b>{summon.damage}</b></>}{summon.damageType && <em> {summon.damageType}</em>}</span>
-        </p>
-        {summon.notes && <p className="summon-note">{summon.notes}</p>}
-        {down && (
-          <div className="summon-down-actions">
-            <button type="button" onClick={onRemove}>{Icon.trash}Dispensar</button>
-            <button type="button" className="is-primary" title="Volta com PV cheio. Conta como uma nova invocação: pague o custo da habilidade." onClick={() => setHp(summon.hpMax)}>{Icon.rise}Reerguer</button>
-          </div>
-        )}
       </div>
+      {(summon.notes || down) && (
+        <div className="summon-foot">
+          {summon.notes && <p className="summon-note">{summon.notes}</p>}
+          {down && (
+            <div className="summon-down-actions">
+              <button type="button" onClick={onRemove}>{Icon.trash}Dispensar</button>
+              <button type="button" className="is-primary" title="Volta com PV cheio. Conta como uma nova invocação: pague o custo da habilidade." onClick={() => setHp(summon.hpMax)}>{Icon.rise}Reerguer</button>
+            </div>
+          )}
+        </div>
+      )}
       {open && (
         <div className="effect-editor summon-editor">
           <label className="span-2">Nome<input value={summon.name} onChange={(event) => update("name", event.target.value)} /></label>
@@ -173,7 +157,6 @@ export function SummonsSection({
     ? `Os mortos${owner ? ` de ${owner}` : ""}, com os números do livro`
     : `As criaturas${owner ? ` de ${owner}` : ""}, com os números do livro`;
   const kindOf = (summon: Summon) => presets.find((preset) => preset.ability === summon.source)?.kind ?? "";
-  const shownArts = [...new Set(summons.map((summon) => summon.art || "criatura"))];
 
   return (
     <section className={`effects-section summons-section reveal-section ${summons.length ? "" : "no-print"}`} id="invocacoes">
@@ -188,7 +171,7 @@ export function SummonsSection({
             const meta = [ability?.activation, ability?.cost].filter((value) => value && value !== "—").join(" · ");
             return (
               <button key={preset.sourceId} type="button" className="summons-call" onClick={() => add(preset)}>
-                <span className="summons-call-photo"><Photo art={preset.art} sizes="44px" /></span>
+                <span className="summons-call-photo"><Art art={preset.art} sizes="48px" /></span>
                 <span className="summons-call-text"><b>{preset.ability}{preset.count && preset.count > 1 ? ` (${preset.count})` : ""}</b>{meta && <small>{meta}</small>}</span>
               </button>
             );
@@ -223,15 +206,6 @@ export function SummonsSection({
           />
         ))}
       </div>
-      {shownArts.length > 0 && (
-        <p className="summons-credits no-print">
-          Fotos, Wikimedia Commons:{" "}
-          {shownArts.map((art, index) => {
-            const plate = plateFor(art);
-            return <span key={art}>{index > 0 && "; "}<a href={plate.page} target="_blank" rel="noreferrer">{plate.credit}</a> ({plate.licence})</span>;
-          })}
-        </p>
-      )}
       <div className="effects-print print-only">
         {summons.map((summon) => (
           <article key={`print-${summon.id}`}>
