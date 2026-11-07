@@ -19,6 +19,7 @@ import { Fact } from "./ui/facts";
 import { TAB_SECTION_IDS, TabBar, VitalsDock, useActiveSection, useScrolledPast } from "./ui/navigation";
 import { EffectsSection } from "./ui/effects";
 import { LibraryPanel } from "./ui/library";
+import { JournalBook } from "./ui/journal";
 import { PrintHelp, printDevice } from "./ui/printHelp";
 import { type Library, findByName, loadLibrary, newSheetId, readSheet, removeSheet, setActive, sortedEntries, writeSheet } from "./library";
 
@@ -34,6 +35,7 @@ export default function Home() {
   const [saved, setSaved] = useState(false);
   const [library, setLibrary] = useState<Library>({ activeId: "", entries: [] });
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [journalOpen, setJournalOpen] = useState(false);
   const [printHelpOpen, setPrintHelpOpen] = useState(false);
   const libraryRef = useRef(library);
   libraryRef.current = library;
@@ -402,6 +404,10 @@ export default function Home() {
         <nav><a href="#combate">Combate</a><a href="#habilidades">Habilidades</a><a href="#equipamentos">Equipamentos</a><a href="#historia">História</a></nav>
         <div className="document-actions">
           <span className={saved ? "save-visible" : ""}>Salvo</span>
+          <button type="button" className="journal-button" onClick={() => setJournalOpen(true)} aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" /><path d="M4 19V5" /></svg>
+            Diário
+          </button>
           <button type="button" className="library-button" onClick={() => setLibraryOpen(true)} aria-haspopup="dialog">Fichas{library.entries.length > 1 && <b>{library.entries.length}</b>}</button>
           <button type="button" onClick={() => importRef.current?.click()}>Importar</button>
           <button type="button" onClick={exportJson}>JSON</button>
@@ -417,6 +423,13 @@ export default function Home() {
           <input ref={importRef} type="file" accept=".json,application/json" hidden onChange={importJson} />
         </div>
       </header>
+      <JournalBook
+        open={journalOpen}
+        ownerName={sheet.name}
+        entries={sheet.journal}
+        onClose={() => setJournalOpen(false)}
+        onChange={(journal) => setSheet((current) => ({ ...current, journal }))}
+      />
       <PrintHelp
         open={printHelpOpen}
         device={printHelpOpen ? printDevice() : "desktop"}

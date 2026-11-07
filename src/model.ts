@@ -1,4 +1,5 @@
 import { SKILL_LIST, type ArmorCategory } from "./rules";
+import type { JournalEntry } from "./journal";
 
 export type AttributeKey = "for" | "des" | "con" | "int" | "sab" | "car";
 export type AbilityCategory = "abilities" | "filiation" | "path" | "skills" | "talents";
@@ -144,6 +145,8 @@ export type CharacterSheet = {
   abilityGroups: Record<AbilityCategory, Ability[]>;
   equipment: Equipment[];
   effects: Effect[];
+  /** Diário da campanha: uma entrada por sessão. */
+  journal: JournalEntry[];
   personality: {
     trait: string;
     ideal: string;
@@ -264,6 +267,7 @@ export const INITIAL_SHEET: CharacterSheet = {
   abilityGroups: { abilities: [], filiation: [], path: [], skills: [], talents: [] },
   equipment: [],
   effects: [],
+  journal: [],
   personality: {
     trait: "",
     ideal: "",
